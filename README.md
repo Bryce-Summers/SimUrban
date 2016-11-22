@@ -2,7 +2,7 @@
 Sim City for Detail Oriented Transportation Engineering People.
 
 #Website
-[Current Working Version](https://bryce-summers.github.io/Hire_Bryce_Website/Transportation_Simulation_And_Game/index.html)
+[Current Working Version](https://bryce-summers.github.io/Transportation_Simulation_And_Game/)
 
 #Usage
 Use you mouse and click to start a road. Drag to a new location and continue to click to continue building the road.
