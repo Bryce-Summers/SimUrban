@@ -12,3 +12,5 @@ Create a design folder and put various universal properties their.
 Create a Model Class that will store the logic for a scene.
 
 Make game scale with the viewport dynamically.
+
+Make sure to roll off different versions. Use Grunt Uglify...
