@@ -1,0 +1,16 @@
+# Programming Guide
+
+Please put all core functions inside othe TSAG namespace.
+
+instead of "class foo", write class TSAG.foo.
+
+
+Most of the geometries that we will be using will be instantiated at the origin and will be controled through scales, rotations, and positioning.
+
+Because of the grunt build include ordering, super classes need to be included in the html file before sub classes...
+
+
+Use the Unit_Meshes class for allocating meshes.
+
+
+My custom defined mesh classes will implement their own clone function.

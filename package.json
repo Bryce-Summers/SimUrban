@@ -1,0 +1,34 @@
+{
+  "name": "transportation_simulation_and_game",
+  "version": "1.0.0",
+  "description": "A 2 0 Dimensional Physically based Frustrum Tracer that traces rays, instead of frustrums",
+  "main": "index.html",
+  "scripts": {
+    "test": "hello"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bryce-Summers/Transportation_Simulation_And_Game.git"
+  },
+  "keywords": [
+    "transportation",
+    "game",
+    "road",
+    "agents"
+  ],
+  "author": "Bryce Summers",
+  "license": "???",
+  "bugs": {
+    "url": "https://github.com/Bryce-Summers/Transportation_Simulation_And_Game/issues"
+  },
+  "homepage": "https://github.com/Bryce-Summers/Transportation_Simulation_And_Game",
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-uglify": "^1.0.2",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-include-source": "^1.0.0"
+  },
+  "dependencies": {
+    "coffee-script": "^1.11.1"
+  }
+}
