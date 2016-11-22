@@ -6,7 +6,7 @@ Leader: Bryce Summers, NYU IDM Graduate Student.
 Advisor: Jack Bringardner, NYU Professor: General Engineering and Civil Engineering.
 
 # Status
-In Progress. I am working on this as a research project at New York Universiy in Collaboration with Transportation Engineers as well as people who care about public policy concerning transit.
+In Early Progress. I am working on this as a research project at New York Universiy in Collaboration with Transportation Engineers as well as people who care about public policy concerning transit.
 
 # Pull Requests
 I don't think I will accept any pull requests until I finish designing and implementing the foundational structure of the game. I plan to develop a standardized way that people can contribute new features and use cases.
