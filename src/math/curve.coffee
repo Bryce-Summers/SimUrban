@@ -17,11 +17,43 @@ class TSAG.Curve
     constructor: () ->
 
         # A spline that dynamically parameterizes itself to between 0 and 1.
-        @_spline = new THREE THREE.CatmullRomCurve3()
+        @_spline = new THREE.CatmullRomCurve3()
+
+        @_discretization = []
 
     # p : THREE.Vector3.
     addPoint: (p) ->
-        @_spline.points.push(p);
+        @_spline.points.push(p)
+
+    numPoints: (p) ->
+        return @_spline.points.length
+
+    getPointAtIndex: (i) ->
+        return @_spline.points[i]
+
+    getLastPoint: () ->
+        return @getPointAtIndex(@numPoints() - 1)
+
+    position: (t) ->
+        return @_spline.getPoint(t)
+
+    tangent: (t) ->
+        return @_spline.getTangent(t)
+
+    offset: (t, amount) ->
+
+        tan = @tangent(t)
+        tan.setLength(amount);
+        
+        # Perpendicularlize the vector.
+        x = tan.x;
+        y = tan.y;
+        tan.x =  y;
+        tan.y = -x;
+        
+        return @position(t).add(tan);
+
+
 
     # Returns a list of points representing this spline.
     # They will be no more than max_length apart.
@@ -30,9 +62,11 @@ class TSAG.Curve
     # This is more efficient than the built in THREE.js version, because it does the binary searches for all of the points at the same time.
     # It may produce up to 2 times as many points though...
     # FIXME: Do an analysis of differnt spline discretization techniques.
-    #
-    getPoints: (max_length) ->
+    # I believe I will compensate for this algorithms problems, by designing my user interactions such that when they click near the original spline, that is a signal to go back.
+    getDiscretization: (max_length) ->
+        return @_discretization
 
+    updateDiscretization: (max_length) ->
         output = []
         p0 = @_spline.getPoint(0)
         output.push(p0)
@@ -64,3 +98,42 @@ class TSAG.Curve
             low   = high
             p_low = p_high
             continue
+
+        @_discretization = output
+
+    getOffsets: (max_length, amount) ->
+
+        o0 = @offset(0, amount)
+        output = []
+        output.push(o0)
+
+        S = []; # Stack.
+        S.push(1.0)
+        low = 0
+        p_low = @offset(low, amount)
+
+        # The stack stores the right next upper interval.
+        # The lower interval starts at 0 and is set to the upper interval.
+        # every time an interval is terminated after subdivision is sufficient.
+
+        # Left to right subdivision loop.
+        while S.length != 0
+        
+            high   = S.pop()
+            p_high = @offset(high, amount)
+
+            # Subdivision is sufficient, move on to the next point.
+            while p_low.distanceTo(p_high) > max_length
+            
+                # Otherwise subdivide the interval and keep going.
+                S.push(high)
+                high = (low + high)/2.0
+                p_high = @offset(high, amount)
+            
+
+            output.push(p_high)
+            low = high
+            p_low = p_high
+            continue
+        
+        return output        

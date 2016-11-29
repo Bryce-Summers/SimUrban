@@ -15,7 +15,7 @@ class TSAG.Mouse_Input_Controller
         params = {color: 0xff0000}
 
         # THREE.js Mesh
-        mesh = mesh_factory.newCircle(params);
+        mesh = mesh_factory.newCircle(params)
 
 
         # fixme: Put this in a style guide class.
@@ -44,11 +44,11 @@ class TSAG.Mouse_Input_Controller
         if @state == "idle"
         
             # Create the spline.
-            @road = new THREE.CatmullRomCurve3( [
-                new THREE.Vector3( event.x, event.y, 0),
-                new THREE.Vector3( event.x, event.y, 0)
-            ] );
-
+            @road = new TSAG.Curve();
+            @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
+            # The second point is used as the dummy point during mouse movements.
+            @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
+            
             @state = "building"
             @_mousePrevious.x = event.x
             @_mousePrevious.y = event.y
@@ -62,7 +62,7 @@ class TSAG.Mouse_Input_Controller
 
             # Build more road if the user clicks far enough away.
             if dist > @_min_dist
-                @road.points.push(new THREE.Vector3( event.x, event.y, 0));
+                @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
 
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
@@ -71,7 +71,7 @@ class TSAG.Mouse_Input_Controller
             else
                 @state = "idle"
                 # Preserve the road object.
-                @road_obj = null    
+                @road_obj = null
             
 
         # We are removing all dependance on right clicking.
@@ -99,16 +99,35 @@ class TSAG.Mouse_Input_Controller
             @scene.remove(@road_obj)
 
         if @state == "building"
-            len = @road.points.length
-            pos = @road.points[len - 1]
+            len = @road.numPoints()
+            pos = @road.getPointAtIndex(len - 1)
             pos.x = event.x
             pos.y = event.y
 
-            geometry = new THREE.Geometry();
-            geometry.vertices = @road.getPoints( 500 );
+            max_length     = 10;
+            offset_amount = 10;
+            @road.updateDiscretization(10)
 
-            material = new THREE.LineBasicMaterial( { color : 0x000000 } );
+            # -- Compute various lines for the road.
+            # We will pack them into a single THREE.js Object.
+            @road_obj = new THREE.Object3D()
 
-            #Create the final Object3d to add to the scene
-            @road_obj = new THREE.Line( geometry, material );
+            # For now, we will use simple black strokes.
+            material = new THREE.LineBasicMaterial( { color : 0x000000 } )
+            middle_material = new THREE.LineBasicMaterial( { color : 0x514802 } )
+
+
+            middle_line = new THREE.Geometry()
+            middle_line.vertices = @road.getDiscretization()
+            @road_obj.add(new THREE.Line( middle_line, middle_material ))
+
+            left_line = new THREE.Geometry()
+            left_line.vertices = @road.getOffsets(max_length, offset_amount)
+            @road_obj.add(new THREE.Line( left_line, material ))
+
+            right_line = new THREE.Geometry()
+            right_line.vertices = @road.getOffsets(max_length, -offset_amount)
+            @road_obj.add(new THREE.Line( right_line, material ))
+
+            # Create the final Object3d to add to the scene
             @scene.add(@road_obj)
