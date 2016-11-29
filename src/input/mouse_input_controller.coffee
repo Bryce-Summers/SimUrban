@@ -32,28 +32,55 @@ class TSAG.Mouse_Input_Controller
         @scene.add(mesh);
 
         @pointer = mesh
-        
 
         @state = "idle";
+
+        @_mousePrevious = {x:0, y:0}
+
+        @_min_dist = 10
 
     mouse_down: (event, rightButton) ->
 
         if @state == "idle"
         
             # Create the spline.
-            @road = new THREE.SplineCurve3( [
+            @road = new THREE.CatmullRomCurve3( [
                 new THREE.Vector3( event.x, event.y, 0),
                 new THREE.Vector3( event.x, event.y, 0)
             ] );
 
             @state = "building"
-        else
-            @road.points.push(new THREE.Vector3( event.x, event.y, 0));
+            @_mousePrevious.x = event.x
+            @_mousePrevious.y = event.y
 
+        else
+
+            dist = TSAG.Math.distance(
+                        event.x, event.y,
+                        @_mousePrevious.x,
+                        @_mousePrevious.y)
+
+            # Build more road if the user clicks far enough away.
+            if dist > @_min_dist
+                @road.points.push(new THREE.Vector3( event.x, event.y, 0));
+
+                @_mousePrevious.x = event.x
+                @_mousePrevious.y = event.y
+            # Stop the interaction if the user is sufficiently close to their
+            # previous tap.
+            else
+                @state = "idle"
+                # Preserve the road object.
+                @road_obj = null    
+            
+
+        # We are removing all dependance on right clicking.
+        ###
         if rightButton
             @state = "idle"
             # Preserve the Road object.
             @road_obj = null
+        ###
 
     mouse_up:   (event) ->
 
@@ -71,8 +98,6 @@ class TSAG.Mouse_Input_Controller
         if @road_obj
             @scene.remove(@road_obj)
 
-            debugger;
-
         if @state == "building"
             len = @road.points.length
             pos = @road.points[len - 1]
@@ -83,9 +108,6 @@ class TSAG.Mouse_Input_Controller
             geometry.vertices = @road.getPoints( 500 );
 
             material = new THREE.LineBasicMaterial( { color : 0x000000 } );
-
-
-            
 
             #Create the final Object3d to add to the scene
             @road_obj = new THREE.Line( geometry, material );

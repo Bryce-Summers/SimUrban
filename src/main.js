@@ -35,8 +35,8 @@ function init()
     init_renderer(params);
 
     // Clear to white Background.
-    renderer.setClearColor( 0xffffff );
-    renderer.anti
+    // FIXME: Use a Style Class.
+    renderer.setClearColor( 0xD8C49E );
 
     init_input();
 }

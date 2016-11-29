@@ -14,8 +14,9 @@
 class TSAG.Unit_Meshes
 
     constructor: () ->
-        @_square = new TSAG.Mesh_Unit_Square();
-        @_circle = new TSAG.Mesh_Unit_Circle();
+        @_square   = new TSAG.Mesh_Unit_Square();
+        @_circle   = new TSAG.Mesh_Unit_Circle();
+        @_triangle = new TSAG.Mesh_Unit_Triangle();
 
     #params{color: hexvalue}
     newSquare: (params) ->
@@ -27,3 +28,8 @@ class TSAG.Unit_Meshes
         
         # FIXME: Once we add outlines, this might break.
         return @_circle.clone(params);
+
+    newTriangle: (params) ->
+
+        # FIXME: Once we add outlines, this might break.
+        return @_triangle.clone(params);
