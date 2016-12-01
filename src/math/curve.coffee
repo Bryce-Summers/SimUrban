@@ -34,6 +34,9 @@ class TSAG.Curve
     getLastPoint: () ->
         return @getPointAtIndex(@numPoints() - 1)
 
+    removeLastPoint: () ->
+        @_spline.points.pop()
+
     position: (t) ->
         return @_spline.getPoint(t)
 

@@ -41,13 +41,16 @@ class TSAG.Mouse_Input_Controller
 
     mouse_down: (event, rightButton) ->
 
+        # We won't be using the right button for anything.
+        return if rightButton
+
         if @state == "idle"
         
             # Create the spline.
             @road = new TSAG.Curve();
             @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
             # The second point is used as the dummy point during mouse movements.
-            @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
+            @road.addPoint(new THREE.Vector3( event.x, event.y+1, 0))
             
             @state = "building"
             @_mousePrevious.x = event.x
@@ -62,13 +65,24 @@ class TSAG.Mouse_Input_Controller
 
             # Build more road if the user clicks far enough away.
             if dist > @_min_dist
-                @road.addPoint(new THREE.Vector3( event.x, event.y, 0))
+
+                # Round last point.
+                pos = @road.getLastPoint()
+                pos.x = Math.floor(pos.x)
+                pos.y = Math.floor(pos.y)
+
+                # We use offsets to prevent 0 length splines that cause degenerate behavior.
+                @road.addPoint(new THREE.Vector3( event.x + .01, event.y + .01, 0))
 
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
             # Stop the interaction if the user is sufficiently close to their
             # previous tap.
             else
+
+                # Round last point.
+                @road.removeLastPoint()
+
                 @state = "idle"
                 # Preserve the road object.
                 @road_obj = null
@@ -90,8 +104,8 @@ class TSAG.Mouse_Input_Controller
         screen_w = window.innerWidth;
         screen_h = window.innerHeight;
 
-        pos.x = event.x;
-        pos.y = event.y;
+        pos.x = event.x
+        pos.y = event.y
 
 
         # FIXME: Clean this up.
@@ -101,8 +115,10 @@ class TSAG.Mouse_Input_Controller
         if @state == "building"
             len = @road.numPoints()
             pos = @road.getPointAtIndex(len - 1)
-            pos.x = event.x
-            pos.y = event.y
+
+            # We use random numbers to ensure a lack of degeneracy.
+            pos.x = event.x + .01
+            pos.y = event.y + .01
 
             max_length     = 10;
             offset_amount = 10;

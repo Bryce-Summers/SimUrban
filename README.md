@@ -39,6 +39,9 @@ FIXME: Go through and clarify all of this stuff.
 
 Download grunt to inject the all of the files automatically.
 
+You can probably just use:
+npm install
+
 // Initialize npm repository.
 npm init
 
@@ -47,7 +50,7 @@ npm init
 <!-- include: "type": "js", "files": "**/*.js" -->
 <!-- /include -->
 
-
+npm install
 npm install grunt --save-dev
 npm install grunt-contrib-uglify --save-dev
 npm install grunt-contrib-watch --save-dev
