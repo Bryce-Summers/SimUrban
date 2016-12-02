@@ -1,8 +1,8 @@
-# Transportation_Simulation_And_Game
-Sim City for Detail Oriented Transportation Engineering People.
+# Sim Urban
+Sim City for Detail Oriented Transportation Engineering, Urban Planning, etc People.
 
 #Website
-[Current Working Version](https://bryce-summers.github.io/Transportation_Simulation_And_Game/)
+[Current Working Version](https://bryce-summers.github.io/SimUrban/)
 
 #Usage
 Use you mouse and click to start a road. Drag to a new location and continue to click to continue building the road.
