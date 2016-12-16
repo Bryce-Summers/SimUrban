@@ -11,6 +11,9 @@ var mouse_input;
 
 function init()
 {
+    // run some Tests.
+    new TSAG.Testing();
+
     // Scene Graph.
     root_scene = new TSAG.Random_Scene(window.innerWidth, window.innerHeight);
 
