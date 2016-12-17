@@ -13,28 +13,40 @@ class TSAG.Testing
 
     constructor: () ->
 
-    	@test_AABB()
+        #@test_AABB()
 
 
     test_AABB: () ->
 
-    	scene = new THREE.Scene()
+        scene = new THREE.Scene()
 
-    	geometry = new THREE.Geometry()
+        geometry = new THREE.Geometry()
 
+        y = 0
+        for x in [0 .. 10]
+            mesh = @test_mesh(new THREE.Vector3(x*3 +  0, y*3 + 1, 0 ),
+                              new THREE.Vector3(x*3 + -1, y*3 - 1, 0 ),
+                              new THREE.Vector3(x*3 +  1, y*3 - 1, 0 ))
+            scene.add( mesh )
 
+        AABB = new TSAG.AABB(scene, {val: 'x', dim:2})
 
-		material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
-		mesh = new THREE.Mesh( geometry, material );
-		scene.add( mesh );
+        origin    = new THREE.Vector3(0, 0, -10)
+        direction = new THREE.Vector3(0, 0, 1)
+        ray = new THREE.Ray(origin, direction)
 
-		AABB = new TSAG.AABB(scene, {val: 'x', dim:2})
+        [mesh, inter] = AABB.collision_query(ray)
 
-		origin    = new THREE.Vector3(0, 0, -10)
-		direction = new THREE.Vector3(0, 0, 1)
-		ray = new THREE.Ray(origin, direction)
+        console.log(mesh)
+        console.log(inter)
 
-		[mesh, inter] = AABB.collision_query(ray)
+    # Returns a test triangle mesh.
+    test_mesh: (a, b, c) ->
+    
+        geometry = new THREE.Geometry()
+        geometry.vertices.push(a, b, c)
 
-		console.log(mesh)
-		console.log(inter)
+        geometry.faces.push( new THREE.Face3( 0, 1, 2 ) )
+
+        material = new THREE.MeshBasicMaterial( { color: 0xffff00 } )
+        mesh = new THREE.Mesh( geometry, material )

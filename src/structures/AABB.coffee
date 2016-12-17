@@ -24,20 +24,24 @@ class TSAG.AABB
         else
             triangle_list = obj
 
-        if triangle_list.length < 4
+        # Ensure that all of these triangles have bounding boxes.
+        @_ensure_bounding_boxes(triangle_list)
+        @_AABB = @_compute_AABB(triangle_list)
+
+        # Base case, less than 4 triangles get put into a collection of leaf nodes.
+        if triangle_list.length < 100
             for i in [0...triangle_list.length]
-                @leafs.push(triangle_list[i])
+                @_leafs.push(triangle_list[i])
+            return
 
-        @_AABB = _compute_AABB(triangle_list)
-
-        if xyx.dim == 2
+        if xyz.dim == 2
             @_AABB.min.z = -1
             @_AABB.max.z = +1
 
-        triangle_list       = @_sort_triangle_list(triangle_list, xyz)
+        triangle_list = @_sort_triangle_list(triangle_list, xyz)
         [left_partition, right_partition] = @_partition_by_SA(triangle_list)
 
-        xyz.value = @_nextXYZ(xyz)
+        xyz.val = @_nextXYZ(xyz)
         @_left  = new TSAG.AABB(left_partition,  xyz)
         @_right = new TSAG.AABB(right_partition, xyz)
 
@@ -58,9 +62,10 @@ class TSAG.AABB
                 c = triangle.c
 
                 # No backface culling.
-                intersection = ray.intersectTriangle ( a, b, c, false)
+                intersection = ray.intersectTriangle(a, b, c, false)
                 if intersection != null
                     return [triangle.mesh, intersection]
+
 
         else
             output = @_left.collision_query(ray)
@@ -71,6 +76,52 @@ class TSAG.AABB
 
         # No Intersection.
         return null
+
+    get_AABB_line_meshes : (material) ->
+        
+        # Create a list of all line goemetries.
+        geometries = []
+        @get_AABB_geometries(geometries)
+
+        output = []
+        for geom in geometries
+            line = new THREE.Line( geom, material )
+            output.push(line)
+
+        return output
+        
+
+    # Appends to the given list Line Geometries representing the all of the bounding boxes for this AABB hierarchy.
+    get_AABB_geometries : (output) ->
+
+        # First create a geometry for this node's box.
+        min = @_AABB.min
+        max = @_AABB.max
+
+        min_x = min.x
+        min_y = min.y
+
+        max_x = max.x
+        max_y = max.y
+
+        geometry = new THREE.Geometry();
+        geometry.vertices.push(
+            new THREE.Vector3( min_x, min_y, 0 ),
+            new THREE.Vector3( max_x, min_y, 0 ),
+            new THREE.Vector3( max_x, max_y, 0 ),
+            new THREE.Vector3( min_x, max_y, 0 ),
+            new THREE.Vector3( min_x, min_y, 0 ) # Closure.
+        )
+
+        output.push(geometry)
+
+        # If we are not a leaf node, add left and right child nodes.
+        if @_leafs.length == 0
+            @_left.get_AABB_geometries(output)
+            @_right.get_AABB_geometries(output)
+
+        return
+
 
     ###
      - Private Construction Methods. -----------------------
@@ -86,16 +137,26 @@ class TSAG.AABB
             vertices = geometry.vertices
             faces    = geometry.faces
 
+            # Matrix Transform form local meshes to world positions.
+            localToWorld = mesh.matrixWorld
+
             for face in faces
-                a = vertices[face.a]
-                b = vertices[face.b]
-                c = vertices[face.c]
+                a = vertices[face.a].clone()
+                b = vertices[face.b].clone()
+                c = vertices[face.c].clone()
+
+                a.applyMatrix4(localToWorld)
+                b.applyMatrix4(localToWorld)
+                c.applyMatrix4(localToWorld)
+
                 triangle = new THREE.Triangle(a, b, c)
 
                 # Set a pointer to this triangle's mesh.
                 triangle.mesh = mesh
 
                 triangle_list.push(triangle)
+
+        return triangle_list
 
 
     # Converts a THREE.Object3D into a list of Mesh objects.
@@ -106,32 +167,30 @@ class TSAG.AABB
         add_output =
             (o) -> if o.geometry then output.push(o)
 
-        add_output.output = output
-
-        obj.transverse(add_output)
+        obj.traverse(add_output)
 
         return output
 
-    # Sorts the given mesh list by cetroid x position.
+    # Sorts the given triangle list by centroid x position.
     _sort_triangle_list: (triangle_list, xyz) ->
         centroid_index_list = @_centroid_index_list(triangle_list)
 
         sort_function = 
             (a, b) ->
-                switch this.val
+                switch xyz.val
                     when 'x' then return a.centroid.x - b.centroid.x
                     when 'y' then return a.centroid.y - b.centroid.y
                     when 'z' then return a.centroid.z - b.centroid.z
                 debugger
                 console.log("xyz is malformed.")
-        sort_function.val = xyz.val
 
         centroid_index_list.sort(sort_function)
 
         output = []
         len = triangle_list.length
-        for i in [0..len]
-            output[i] = centroid_index_list[i].index
+        for i in [0...len]
+            triangle_index = centroid_index_list[i].index
+            output.push(triangle_list[triangle_index])
 
         return output
 
@@ -155,7 +214,7 @@ class TSAG.AABB
         console.log("Case not handled.")
 
 
-    # Converts a mesh list into a mesh list.
+    # Converts a triangle list into a centroid node list that contains indices.
     _centroid_index_list: (triangle_list) ->
         output = []
         len = triangle_list.length
@@ -169,11 +228,11 @@ class TSAG.AABB
 
     # Computes the centroid of the the vertices in the given THREE.js geometry.
     _computeCentroid: (triangle) ->
-        centroid = new Vector3(0, 0, 0)
+        centroid = new THREE.Vector3(0, 0, 0)
 
-        centroid.add(triangl.a)
-        centroid.add(triangl.b)
-        centroid.add(triangl.c)
+        centroid.add(triangle.a)
+        centroid.add(triangle.b)
+        centroid.add(triangle.c)
 
         centroid.divideScalar(3)
 
@@ -184,15 +243,16 @@ class TSAG.AABB
     # where the split is detemined by minimizing the surface area heuristic.
     # ASSUMPTION: mesh_list.length >= 1
     _partition_by_SA: (triangle_list) ->
-        @_ensure_bounding_boxes(triangle_list)
-
+        
         # Declare minnimization values.
+        # We are going to minimize the maximum surface area.
         min_sah   = Number.MAX_VALUE
         min_index = -1
 
+
         # Left starts out including the 1st item.
-        left = triangle_list[0]
-        
+        left = [triangle_list[0]]
+
         # We populate the right partition in backwards order,
         # so that we can sequentially pop/push items to the left.
         # This saves us array movement time.
@@ -208,11 +268,11 @@ class TSAG.AABB
             right_AABB = @_compute_AABB(right)
             sah_right  = @_compute_SA(right_AABB)
 
-            sah = sah_left + sah_right
+            sah = Math.max(sah_left, sah_right)
 
             if sah < min_sah
                 min_sah   = sah
-                min_index = min_index
+                min_index = i
 
             # Iterate partition choice.
             left.push(right.pop())
@@ -235,11 +295,15 @@ class TSAG.AABB
         len = triangle_list.length
         for i in [0...len]
             triangle = triangle_list[i]
+
+            if not triangle
+                debugger
+
             if not triangle.boundingBox
                 @_computeBoundingBox(triangle)
 
     _computeBoundingBox: (triangle) ->
-        AABB = new THREE.Box()
+        AABB = new THREE.Box3()
 
         AABB.expandByPoint(triangle.a)
         AABB.expandByPoint(triangle.b)
@@ -260,7 +324,7 @@ class TSAG.AABB
             AABB = triangle.boundingBox
             output.union(AABB)
 
-        return AABB
+        return output
 
     # Returns the surface area for the given bounding box.
     _compute_SA: (AABB) ->

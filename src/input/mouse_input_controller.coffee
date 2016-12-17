@@ -41,6 +41,17 @@ class TSAG.Mouse_Input_Controller
 
     mouse_down: (event, rightButton) ->
 
+        results = @scene.queryPoint(event.x, event.y)
+        console.log(event.x, event.y)
+        if results != null
+            mesh         = results[0]
+            intersection = results[1]
+            mesh.material.color.set( 0xff0000 )
+
+
+        # FIXME: Remove this after query testing is done.
+        return
+
         # We won't be using the right button for anything.
         return if rightButton
 
@@ -131,7 +142,6 @@ class TSAG.Mouse_Input_Controller
             # For now, we will use simple black strokes.
             material = new THREE.LineBasicMaterial( { color : 0x000000 } )
             middle_material = new THREE.LineBasicMaterial( { color : 0x514802 } )
-
 
             middle_line = new THREE.Geometry()
             middle_line.vertices = @road.getDiscretization()

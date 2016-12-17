@@ -13,9 +13,10 @@ class TSAG.Random_Scene extends THREE.Scene
         @_padding = 30;
 
         @_Mesh_Factory = new TSAG.Unit_Meshes()
+        @_AABB = null
 
         # Create a plane that is perpendicular facing to the z axis.
-        for i in [0..10]
+        for i in [0...1000]
 
             # Allocate a new square mesh, reusing the same unit square geometry.
             #mesh = @_Mesh_Factory.newSquare({color:0xaaaaaa})
@@ -39,6 +40,7 @@ class TSAG.Random_Scene extends THREE.Scene
             rotation.z = Math.random() * Math.PI*2
 
             @add(mesh)
+
         return
 
     # Construct a house object from a square and a triangle.
@@ -57,3 +59,25 @@ class TSAG.Random_Scene extends THREE.Scene
 
     getMeshFactory: () ->
         return @_Mesh_Factory
+
+    # Returns the mesh and the intersection point at the given cursor location or null if their is nothing there.
+    queryPoint: (x, y) ->
+        if @_AABB == null
+            @_AABB = new TSAG.AABB(this, {val: 'x', dim:2})
+
+            # Visualize the hierarchy
+            line_material = new THREE.LineBasicMaterial({color: 0x0000ff});
+            aabb_line_meshes = @_AABB.get_AABB_line_meshes(line_material)
+            for mesh in aabb_line_meshes
+                @add(mesh)
+
+            
+
+        origin    = new THREE.Vector3(x, y, -10)
+        direction = new THREE.Vector3(0, 0,   1)
+        ray = new THREE.Ray(origin, direction)
+
+        results = @_AABB.collision_query(ray)
+
+        #[mesh, intersection_point]
+        return results

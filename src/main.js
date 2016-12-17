@@ -8,6 +8,7 @@ var renderer;
 var root_scene;
 var root_camera;
 var mouse_input;
+var root_AABB;
 
 function init()
 {
