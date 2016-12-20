@@ -16,7 +16,7 @@ class TSAG.Random_Scene extends THREE.Scene
         @_AABB = null
 
         # Create a plane that is perpendicular facing to the z axis.
-        for i in [0...3000]
+        for i in [0...1000]
 
             # Allocate a new square mesh, reusing the same unit square geometry.
             #mesh = @_Mesh_Factory.newSquare({color:0xaaaaaa})
@@ -30,6 +30,7 @@ class TSAG.Random_Scene extends THREE.Scene
             pos = mesh.position
             pos.x = x
             pos.y = y
+            pos.z = -Math.random()
 
             scale = mesh.scale
             scale.x = w
@@ -73,8 +74,8 @@ class TSAG.Random_Scene extends THREE.Scene
 
             
 
-        origin    = new THREE.Vector3(x, y, -10)
-        direction = new THREE.Vector3(0, 0,   1)
+        origin    = new THREE.Vector3(x, y, 10)
+        direction = new THREE.Vector3(0, 0, -1)
         ray = new THREE.Ray(origin, direction)
 
         results = @_AABB.collision_query(ray)

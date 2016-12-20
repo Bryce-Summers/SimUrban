@@ -41,14 +41,6 @@ class TSAG.Mouse_Input_Controller
 
     mouse_down: (event, rightButton) ->
 
-        results = @scene.queryPoint(event.x, event.y)
-        console.log(event.x, event.y)
-        if results != null
-            mesh         = results[0]
-            intersection = results[1]
-            mesh.material.color.set( 0xff0000 )
-
-
         # FIXME: Remove this after query testing is done.
         return
 
