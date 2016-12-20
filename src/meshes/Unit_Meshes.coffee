@@ -8,7 +8,7 @@
 #          linear memory for the matrix transforms.
 
 # This class then provides instantiation functions for unit geometry based meshes.
-# Ideally this will only be ever allocated once.
+# Ideally this will only be ever allocated once in the style file.
 
 
 class TSAG.Unit_Meshes

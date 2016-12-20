@@ -5,14 +5,22 @@
  */
 
 var renderer;
-var root_scene;
+var root_e_scene;
 var root_camera;
-var mouse_input;
+
+var input;
+var root_AABB;
 
 function init()
 {
+    // run some Tests.
+    new TSAG.Testing();
+
+    // Initialize all of the global material, mesh constructor's, etc.
+    TSAG.init_style();
+
     // Scene Graph.
-    root_scene = new TSAG.Random_Scene(window.innerWidth, window.innerHeight);
+    root_e_scene = new TSAG.E_Scene(window.innerWidth, window.innerHeight);
 
     // Camera.
     var dim = {x:0, y:0, w:window.innerWidth, h:innerHeight, padding:10};
@@ -36,6 +44,7 @@ function init()
 
     // Clear to white Background.
     // FIXME: Use a Style Class.
+    // FIXME: Move this to a background prropery of the E_Scene.
     renderer.setClearColor( 0xD8C49E );
 
     init_input();
@@ -53,7 +62,8 @@ function init_renderer(params)
 
 function init_input()
 {
-    mouse_input = new TSAG.Mouse_Input_Controller(root_scene, root_camera);
+    // Initialize the root of the input specification tree.
+    input = new TSAG.I_All_Main(root_e_scene, root_camera);
 
     window.addEventListener( 'resize', onWindowResize, false);
 
@@ -64,7 +74,6 @@ function init_input()
     window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mouseup",   onMouseUp);
 }
-
 
 // Events.
 function onWindowResize( event )
@@ -78,13 +87,11 @@ function onKeyPress( event )
     // Key codes for event.which.
     var LEFT  = 37
     var RIGHT = 39
-    
-    
 }
 
 function onMouseMove( event )
 {
-    mouse_input.mouse_move(event);
+    input.mouse_move(event);
 }
 
 function onMouseDown( e )//event
@@ -98,24 +105,26 @@ function onMouseDown( e )//event
     else if ("button" in e)  // IE, Opera 
         isRightMB = e.button == 2; 
 
-    mouse_input.mouse_down(e, isRightMB);
+    if(isRightMB)
+        return
+
+    input.mouse_down(e);
 }
 
 function onMouseUp( event )
 {
-    mouse_input.mouse_up(event);
+    input.mouse_up(event);
 }
 
-function animate() {
-
+function animate()
+{
     requestAnimationFrame( animate );
     render();
-
 }
 
-function render() {
-
-    renderer.render(root_scene, root_camera);
+function render()
+{
+    renderer.render(root_e_scene.getVisual(), root_camera);
 }
 
 init();

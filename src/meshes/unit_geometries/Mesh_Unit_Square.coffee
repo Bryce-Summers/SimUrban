@@ -14,8 +14,8 @@ class TSAG.Mesh_Unit_Square extends TSAG.Mesh_Basic
     constructor: () ->
 
         # Creat a plane that is perpendicular facing to the z axis.
-        geometry = new THREE.PlaneBufferGeometry( 1, 1);
-
+        #geometry = new THREE.PlaneBufferGeometry( 1, 1);
+        geometry = new THREE.PlaneGeometry( 1, 1);
         
         outline = new THREE.Geometry();
         outline.vertices.push(

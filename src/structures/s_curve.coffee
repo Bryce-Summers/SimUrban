@@ -11,15 +11,16 @@
 # 3. Maximum-length interval discretizations for producing renderable line segments.
 #
 # Currently we are implementing this as a reduction to THREE.CatmullRomCurve3, but we may remove the dependancy if we have time and go sufficiently beyond it.
-# FIXME: Standardize the curve class and instantiate it from interfacial curves.
-class TSAG.Curve
+# FIXME: Sandardize the curve class and instantiate it from interfacial curves.
+class TSAG.S_Curve
 
     constructor: () ->
 
         # A spline that dynamically parameterizes itself to between 0 and 1.
         @_spline = new THREE.CatmullRomCurve3()
 
-        @_discretization = []
+        # A list of points in the discretization.
+        @_point_discretization = []
 
     # p : THREE.Vector3.
     addPoint: (p) ->
@@ -35,7 +36,7 @@ class TSAG.Curve
         return @getPointAtIndex(@numPoints() - 1)
 
     removeLastPoint: () ->
-        @_spline.points.pop()
+        return @_spline.points.pop()
 
     position: (t) ->
         return @_spline.getPoint(t)
@@ -104,11 +105,15 @@ class TSAG.Curve
 
         @_discretization = output
 
-    getOffsets: (max_length, amount) ->
+    # max_length:float, maximum length out output segment.
+    # amount: the distance the offset curve is away from the main curve. positive or negative is fine.
+    # time_output (optional) will be populated with the times for the output points.
+    getOffsets: (max_length, amount, times_output) ->
 
         o0 = @offset(0, amount)
         output = []
         output.push(o0)
+        times_output.push(0) if times_output
 
         S = []; # Stack.
         S.push(1.0)
@@ -135,8 +140,9 @@ class TSAG.Curve
             
 
             output.push(p_high)
+            times_output.push(high) if times_output
             low = high
             p_low = p_high
             continue
         
-        return output        
+        return output

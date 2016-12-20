@@ -12,21 +12,13 @@ class TSAG.Mesh_Basic extends THREE.Mesh
     constructor: (area_geometry, @outline_geometry) ->
 
         # Affix the geometry with a material.
-        material = new THREE.MeshBasicMaterial( {color: 0xaaaaaa, side: THREE.DoubleSide} );
+        material = TSAG.style.m_default_fill.clone()
         super(area_geometry, material);
 
-        
         # Black Line color.
-        @line_material = new THREE.LineBasicMaterial({
-            color: 0x000000, linewidth:5
-        });
-        #@line = new THREE.LineSegments( @outline_geometry, @line_material );
+        @line_material = TSAG.style.m_default_line.clone()
 
-        # FIXME: THREE.js bug? HACKED to false.
-        # Evidently lines have problems computing their bounding spheres.
-        #@add( line );
-        
-    # color: fill color.
+    # color: THREE.Color fill color.
     clone: (params) ->
         output  = new THREE.Object3D()
         mesh    = new TSAG.Mesh_Basic(@geometry)
@@ -36,6 +28,10 @@ class TSAG.Mesh_Basic extends THREE.Mesh
         output.add(outline)
 
         # Act on params.
-        mesh.material.color = new THREE.Color(params.color);
+
+        if not (params.color instanceof THREE.Color)
+            debugger
+
+        mesh.material.color = params.color;
 
         return output;

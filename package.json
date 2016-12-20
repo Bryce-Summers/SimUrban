@@ -1,7 +1,7 @@
 {
-  "name": "transportation_simulation_and_game",
+  "name": "Sim_Urban",
   "version": "1.0.0",
-  "description": "A 2 0 Dimensional Physically based Frustrum Tracer that traces rays, instead of frustrums",
+  "description": "A simulation game for detail oriented Transportation Engineers",
   "main": "index.html",
   "scripts": {
     "test": "hello"
