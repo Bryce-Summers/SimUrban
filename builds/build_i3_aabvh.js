@@ -57,14 +57,7 @@ TSAG = {};
     }
 
     Mouse_Input_Controller.prototype.mouse_down = function(event, rightButton) {
-      var dist, intersection, mesh, pos, results;
-      results = this.scene.queryPoint(event.x, event.y);
-      console.log(event.x, event.y);
-      if (results !== null) {
-        mesh = results[0];
-        intersection = results[1];
-        mesh.material.color.set(0xff0000);
-      }
+      var dist, pos;
       return;
       if (rightButton) {
         return;
@@ -359,7 +352,7 @@ TSAG = {};
       this._padding = 30;
       this._Mesh_Factory = new TSAG.Unit_Meshes();
       this._AABB = null;
-      for (i = j = 0; j < 3000; i = ++j) {
+      for (i = j = 0; j < 1000; i = ++j) {
         mesh = this._newHouse({
           color: 0xaaaaaa
         });
@@ -370,6 +363,7 @@ TSAG = {};
         pos = mesh.position;
         pos.x = x;
         pos.y = y;
+        pos.z = -Math.random();
         scale = mesh.scale;
         scale.x = w;
         scale.y = h;
@@ -412,8 +406,8 @@ TSAG = {};
           this.add(mesh);
         }
       }
-      origin = new THREE.Vector3(x, y, -10);
-      direction = new THREE.Vector3(0, 0, 1);
+      origin = new THREE.Vector3(x, y, 10);
+      direction = new THREE.Vector3(0, 0, -1);
       ray = new THREE.Ray(origin, direction);
       results = this._AABB.collision_query(ray);
       return results;
