@@ -110,13 +110,25 @@ class TSAG.Mouse_Input_Controller
     mouse_up:   (event) ->
 
     mouse_move: (event) ->
+
         pos = @pointer.position;
+        pos.x = event.x
+        pos.y = event.y
+
+        results = @scene.queryPoint(event.x, event.y)
+        console.log(event.x, event.y)
+        if results != null
+            mesh         = results[0]
+            intersection = results[1]
+            mesh.material.color.set( 0xff0000 )
+
+        # FIXME: Remove this after query testing is done.
+        return
 
         screen_w = window.innerWidth;
         screen_h = window.innerHeight;
 
-        pos.x = event.x
-        pos.y = event.y
+
 
 
         # FIXME: Clean this up.

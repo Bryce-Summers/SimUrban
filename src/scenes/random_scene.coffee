@@ -16,7 +16,7 @@ class TSAG.Random_Scene extends THREE.Scene
         @_AABB = null
 
         # Create a plane that is perpendicular facing to the z axis.
-        for i in [0...1000]
+        for i in [0...3000]
 
             # Allocate a new square mesh, reusing the same unit square geometry.
             #mesh = @_Mesh_Factory.newSquare({color:0xaaaaaa})
