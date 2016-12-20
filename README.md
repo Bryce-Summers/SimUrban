@@ -1,12 +1,23 @@
 # Sim Urban
 Sim City for Detail Oriented Transportation Engineering, Urban Planning, etc People.
 
-#Website
-[Current Working Version](https://bryce-summers.github.io/SimUrban/)
+#Play the Game!
+[Current Version](https://bryce-summers.github.io/SimUrban/)
+
+#Past Versions
+i[x] are development iterations and d[x] are design iterations.
+[i1](https://bryce-summers.github.io/SimUrban/builds/build_i1.html), 
+[i2](https://bryce-summers.github.io/SimUrban/builds/build_i2.html), 
+[d1](https://bryce-summers.github.io/SimUrbanAxurePrototype/), 
+[i3_aabvh](https://bryce-summers.github.io/SimUrban/builds/build_i3.html)
+[i3](https://bryce-summers.github.io/SimUrban/builds/build_i3.html)
+
+#Documentation
+[Documentation of iterative design and development proccess](https://bryce-summers.github.io/Design_Portfolio/pages/SimUrban/page.html)
 
 #Usage
-Use you mouse and click to start a road. Drag to a new location and continue to click to continue building the road.
-Right click to end a road.
+Use you mouse and click to start a road. Click to continue building the road. In i1, press the right mouse button to end a road, in all others double click to end the road.
+The design iterations are more like websites, just click around and experience suggestive designs.
 
 Link 
 
@@ -28,7 +39,7 @@ FIXME: Go through and clarify all of this stuff.
 
 # Dependancies
 
-- 6/18/2016: Three.JS for client side rendering.
+- 6/18/2016: Three.JS (revision 77) for client side rendering.
 
 # Development Dependancies
 - Coffeescript, better object oriented programming syntax.
