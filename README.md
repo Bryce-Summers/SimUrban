@@ -9,7 +9,7 @@ i[x] are development iterations and d[x] are design iterations.
 [i1](https://bryce-summers.github.io/SimUrban/builds/build_i1.html), 
 [i2](https://bryce-summers.github.io/SimUrban/builds/build_i2.html), 
 [d1](https://bryce-summers.github.io/SimUrbanAxurePrototype/), 
-[i3_aabvh](https://bryce-summers.github.io/SimUrban/builds/build_i3_aabvh.html)
+[i3_aabvh](https://bryce-summers.github.io/SimUrban/builds/build_i3_aabvh.html), 
 [i3](https://bryce-summers.github.io/SimUrban/builds/build_i3.html)
 
 #Documentation
