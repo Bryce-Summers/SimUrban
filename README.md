@@ -6,10 +6,10 @@ Sim City for Detail Oriented Transportation Engineering, Urban Planning, etc Peo
 
 #Past Versions
 i[x] are development iterations and d[x] are design iterations.
- - [i1](https://bryce-summers.github.io/SimUrban/builds/build_i1.html) ![alt text](screenshots/i1.png "i1")
- - [i2](https://bryce-summers.github.io/SimUrban/builds/build_i2.html) ![alt text](screenshots/i2_screenshot.png "i2")
- - [d1](https://bryce-summers.github.io/SimUrbanAxurePrototype/)
- - [i3](https://bryce-summers.github.io/SimUrban/builds/build_i3.html)
+[i1](https://bryce-summers.github.io/SimUrban/builds/build_i1.html), 
+[i2](https://bryce-summers.github.io/SimUrban/builds/build_i2.html), 
+[d1](https://bryce-summers.github.io/SimUrbanAxurePrototype/), 
+[i3](https://bryce-summers.github.io/SimUrban/builds/build_i3.html)
 
 #Documentation
 [Documentation of iterative design and development proccess](https://bryce-summers.github.io/Design_Portfolio/pages/SimUrban/page.html)
