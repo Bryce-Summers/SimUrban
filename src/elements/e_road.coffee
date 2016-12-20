@@ -1,0 +1,138 @@
+#
+# Sim Urban Road class.
+#
+# Written by Bryce Summers on 12 - 19 - 2016.
+# This class represents Road elements.
+#
+#
+
+class TSAG.E_Road extends TSAG.E_Super
+
+    constructor: (edge) ->
+
+        super()
+
+        # Link to the network edge, this can then be used to find the starting, ending locations,
+        # and other network connectivity relationships.
+        @_edge  = edge
+
+        # The main curve is used to determine the geometric embedding of the middle curve on the road.
+        # It is modifiable by a user and is used to compute all other offset curves.
+        @_main_curve = new TSAG.S_Curve()
+
+        visual = @getVisual()
+        visual.position.z = TSAG.style.dz_road
+
+        @_road_visual = null
+
+    # Extends this road to include the given point.
+    # returns false if the given point produces illegal road geometry.
+    addPoint: (pt) ->
+
+        @_main_curve.addPoint(pt)
+
+        # FIXME: Check for illegal road geometry.
+        return true
+
+    removeLastPoint: () ->
+        return @_main_curve.removeLastPoint()
+
+    getPosition: (time) ->
+        return @_main_curve.position(time)
+
+    updateDiscretization: (max_length) ->
+   
+        offset_amount = TSAG.style.road_offset_amount
+        @_main_curve.updateDiscretization(max_length)
+
+        # -- Compute various lines for the road.
+        # We will pack them into a single THREE.js Object.
+        visual = @getVisual()
+        visual.remove(@_road_visual)
+        @_road_visual = new THREE.Object3D()
+        visual.add(@_road_visual)
+
+        # For now, we will use simple black strokes.
+        # FIXME: We will put these style properties somewhere else in the future.
+        material = TSAG.style.m_default_line.clone()
+        material.color = TSAG.style.c_road_outline
+
+        middle_material = TSAG.style.m_default_line.clone()
+        middle_material.color = TSAG.style.c_road_midline
+
+        middle_line = new THREE.Geometry()
+        middle_line.vertices = @_main_curve.getDiscretization()
+        
+        times_left  = []
+        times_right = []
+        verts_left  = []
+        verts_right = []
+
+        left_line  = new THREE.Geometry()
+        verts_left = @_main_curve.getOffsets(max_length, offset_amount, times_left)
+        left_line.vertices = verts_left
+
+        right_line  = new THREE.Geometry()
+        verts_right = @_main_curve.getOffsets(max_length, -offset_amount, times_right)
+        right_line.vertices = verts_right
+
+        # Compute fill, using time lists to determine indices for the faces.
+        fill_geometry = @_get_fill_geometry(verts_left, verts_right, times_left, times_right)
+        fill_material = TSAG.style.m_default_fill.clone()
+        fill_material.color = TSAG.style.c_road_fill
+
+        fill_mesh = new THREE.Mesh( fill_geometry, fill_material )
+        fill_mesh.position.z = -.01 # Draw dill behind.
+        @_road_visual.add(fill_mesh)
+        @_road_visual.add(new THREE.Line( middle_line, middle_material ))
+        @_road_visual.add(new THREE.Line( left_line,   material ))
+        @_road_visual.add(new THREE.Line( right_line,  material ))
+
+    # Creates a fill polygon based on the input times.
+    # Due to line curvature, vertices at higher curvature regions will exhibit higher degrees in this polygonalization.
+    # Assumes each list of times ends on the same time, the times increase strictly monototically.
+    _get_fill_geometry: (left_verts, right_verts, times_left, times_right) ->
+
+        output = new THREE.Geometry()
+        output.vertices = left_verts.concat(right_verts)
+        faces = output.faces
+
+        l_len = left_verts.length
+        r_len = right_verts.length
+
+        l_index = 0
+        r_index = 0
+
+        l_time = 0.0
+        r_time = 0.0
+
+        while l_index < l_len - 1 or r_index < r_len - 1
+
+            left_time  = times_left[l_index]
+            right_time = times_right[r_index]
+
+            big_left  = false
+            big_left  = left_time  < right_time
+
+            # Break tie using by comparing the next couple of points.
+            if left_time == right_time
+                big_left  = times_left[l_index + 1] < times_right[r_index + 1]
+
+            # Use 2 left vertices and 1 right vertex.
+            if big_left
+                face = new THREE.Face3(l_index, l_index + 1, r_index + l_len)
+                # We use a model to allow collision queries to pipe back to this road object with time domain knowledge.
+                face.model = new TSAG.M_Road(@t0, @t1, @road)
+                faces.push(face)
+                l_index += 1
+                continue
+
+            # Big right otherwise.
+            face = new THREE.Face3(r_index + 1 + l_len, r_index + l_len, l_index)
+            face.model = new TSAG.M_Road(@t0, @t1, @road)
+            faces.push(face)
+            r_index += 1
+            continue
+
+        # THREE.Geometry
+        return output

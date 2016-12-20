@@ -1,5 +1,5 @@
 #
-# Axis Aliged Bounding Box Hiearchy.
+# Axis Aliged Bounding Volume Hiearchy.
 # Written by Bryce Summers on 12/6/2016.
 #
 # Purpose: This set partitioning structure may be used to speed up
@@ -8,16 +8,22 @@
 #          If may also be used to rapidly detect non-collisions.
 #
 # FIXME: Instead of using Mesh lists, I think that I should use triangle lists.
+# FIXME: I should probably commit to making this a 2D AABB, and bumb it up to 3D later if needed.
+#
+# Note: I've decided to make this a 2D BVH supporting class only.
+#
 
-class TSAG.AABB
+class TSAG.S_AABVH
 
     # Contructed from the tree rooted at the given THREE.Object3D node.
     # Obj can alternatively be a list of Triangles with pointers to their mesh objects.
     # xyz = {val: 'x', 'y', or 'z', dim = 2 or 3}
+    # FIXME: In hindsite, this xyz thing is silly, since we should just use the minnimizing axis.
     constructor: (obj, xyz) ->
-        
+       
         # Array of THREE.mesh objects.
         @_leafs = []
+        @_leaf_node = false
 
         if obj instanceof THREE.Object3D
             triangle_list       = @_extract_triangle_list(obj)
@@ -30,6 +36,7 @@ class TSAG.AABB
 
         # Base case, less than 4 triangles get put into a collection of leaf nodes.
         if triangle_list.length < 100
+            @_leaf_node = true
             for i in [0...triangle_list.length]
                 @_leafs.push(triangle_list[i])
             return
@@ -42,19 +49,25 @@ class TSAG.AABB
         [left_partition, right_partition] = @_partition_by_SA(triangle_list)
 
         xyz.val = @_nextXYZ(xyz)
-        @_left  = new TSAG.AABB(left_partition,  xyz)
-        @_right = new TSAG.AABB(right_partition, xyz)
+        @_left  = new TSAG.S_AABVH(left_partition,  xyz)
+        @_right = new TSAG.S_AABVH(right_partition, xyz)
 
-    # Takes in a THREE.ray.
-    # returns [A THREE.Mesh, intersection] if it intersects its geometry.
+    # returns the Triangle T at the given location on the 2D plane.
+    # T.mesh returns the mesh. T.model returns the M_xxx object representing information for this particular triangle.
+    # T.mesh.element returns the E_xxx element object.
     # returns null otherwise.
-    # FIXME: This doesn't currenlty use early exit strategies for 3D collision.
-    # It will only work in 2D for now.
-    collision_query: (ray) ->
+    # It is advisable that any meshes used for queries be used with ways of getting
+    # to the classes that you are interested in, such as a @model attribute.
+    query_point: (x, y) ->
+        ray = new THREE.Ray(new THREE.Vector3(x, y, 10), new THREE.Vector3(0, 0, 1))
+        return @query_ray(ray)
+
+    query_ray: (ray) ->
+
         if ray.intersectsBox(@_AABB) == null
             return null
 
-        if @_leafs.length > 0
+        if @_leaf_node
             for i in [0...@_leafs.length]
                 triangle = @_leafs[i]
                 a = triangle.a
@@ -64,29 +77,28 @@ class TSAG.AABB
                 # No backface culling.
                 intersection = ray.intersectTriangle(a, b, c, false)
                 if intersection != null
-                    return [triangle.mesh, intersection]
-
-
+                    return triangle
         else
-            output = @_left.collision_query(ray)
+            output = @_left.query_ray(ray)
             if output != null then return output
 
-            output = @_right.collision_query(ray)
+            output = @_right.query_ray(ray)
             if output != null then return output
 
         # No Intersection.
         return null
 
-    get_AABB_line_meshes : (material) ->
-        
+    # Returns a list of THREE.js renderable meshes.
+    toVisual : (material) ->
+
         # Create a list of all line goemetries.
         geometries = []
         @get_AABB_geometries(geometries)
 
-        output = []
+        output = new THREE.Object3D();
         for geom in geometries
             line = new THREE.Line( geom, material )
-            output.push(line)
+            output.add(line)
 
         return output
         
@@ -116,7 +128,7 @@ class TSAG.AABB
         output.push(geometry)
 
         # If we are not a leaf node, add left and right child nodes.
-        if @_leafs.length == 0
+        if not @_leaf_node
             @_left.get_AABB_geometries(output)
             @_right.get_AABB_geometries(output)
 
