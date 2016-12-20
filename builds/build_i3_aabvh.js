@@ -103,12 +103,20 @@ TSAG = {};
     Mouse_Input_Controller.prototype.mouse_up = function(event) {};
 
     Mouse_Input_Controller.prototype.mouse_move = function(event) {
-      var left_line, len, material, max_length, middle_line, middle_material, offset_amount, pos, right_line, screen_h, screen_w;
+      var intersection, left_line, len, material, max_length, mesh, middle_line, middle_material, offset_amount, pos, results, right_line, screen_h, screen_w;
       pos = this.pointer.position;
-      screen_w = window.innerWidth;
-      screen_h = window.innerHeight;
       pos.x = event.x;
       pos.y = event.y;
+      results = this.scene.queryPoint(event.x, event.y);
+      console.log(event.x, event.y);
+      if (results !== null) {
+        mesh = results[0];
+        intersection = results[1];
+        mesh.material.color.set(0xff0000);
+      }
+      return;
+      screen_w = window.innerWidth;
+      screen_h = window.innerHeight;
       if (this.road_obj) {
         this.scene.remove(this.road_obj);
       }
@@ -351,7 +359,7 @@ TSAG = {};
       this._padding = 30;
       this._Mesh_Factory = new TSAG.Unit_Meshes();
       this._AABB = null;
-      for (i = j = 0; j < 1000; i = ++j) {
+      for (i = j = 0; j < 3000; i = ++j) {
         mesh = this._newHouse({
           color: 0xaaaaaa
         });
