@@ -65,7 +65,9 @@ npm install
 npm install grunt --save-dev
 npm install grunt-contrib-uglify --save-dev
 npm install grunt-contrib-watch --save-dev
-npm install grunt-include-source
+npm install grunt-contrib-concat --save-dev
+npm install grunt-include-source --save-dev
+
 
 npm update
 

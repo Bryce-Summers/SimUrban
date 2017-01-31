@@ -14,4 +14,3 @@ and networks that are used to connect curves and provide paths for agents.
 
 'Structures' are used to organize 'elements' which are objects that have visual and thematic meaning to the player, such as roads in the Sim Urban game.
 Elements contains links back to structural elements.
-

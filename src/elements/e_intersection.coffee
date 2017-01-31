@@ -6,20 +6,15 @@
 
 class TSAG.E_Intersection extends TSAG.E_Super
 
-    constructor: (s_vertex, position) ->
+    constructor: (position) ->
 
         super()
 
-        # Link to the network vertex.
-        # TSAG.S_Vertex
-        @_vertex = s_vertex
-
-        # THREE.Vector3
+        # BDS.Point
         @_position = position
 
-
         fill = TSAG.style.unit_meshes.newSquare({color: TSAG.style.c_road_fill})
-        fill.position.copy(@_position.clone())
+        fill.position.copy(new THREE.Vector3(position.x, position.y, 0))
 
         sx = sy = TSAG.style.road_offset_amount*2
 
@@ -30,15 +25,14 @@ class TSAG.E_Intersection extends TSAG.E_Super
 
         view.position.z = TSAG.style.dz_intersection
 
+        # Generate the default BVH.
+        @generateBVH()
+
     # Adds the given TSAG.e_road object to this intersection.
     # returns false if the given point produces illegal road geometry.
     addRoad: (road) ->
 
         edge = road.getEdge()
-        @_vertex.addEdge(edge)
 
         # FIXME: Returns false if the intersection is malformed. Set some limits on Intersection construction.
         return true
-
-    getVertex: () ->
-        return @_vertex

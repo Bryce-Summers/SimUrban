@@ -1,5 +1,5 @@
 /*! Sim Urban, a project by Bryce Summers.
- *  Single File concatenated by Grunt Concatenate on 20-12-2016
+ *  Single File concatenated by Grunt Concatenate on 27-01-2017
  */
 /*
  * Defines the Traffic Simulation and Game namespace.
@@ -16,6 +16,9 @@ TSAG = {};
  *
  * Written by Bryce Summers on 12 - 19 - 2016.
  *
+ * Some Elements will have pointers to Scribble Elements.
+ * All elements contain an @_view object that is a renderable THREE.js scene node.
+ * All elements also contain an BDS.AABVH @_BVH object that stores versions of this element's geometry for collision detection.
  */
 
 (function() {
@@ -25,11 +28,146 @@ TSAG = {};
       if (!this._view) {
         this._view = new THREE.Object3D();
       }
-      this._BVH = null;
+      this._bvh = new BDS.BVH2D();
+      this._collision_polygon = null;
+      if (!this._topology) {
+        this._topology = null;
+      }
     }
+
+    E_Super.prototype.isTemporary = function() {
+      return this._topology === null;
+    };
 
     E_Super.prototype.getVisual = function() {
       return this._view;
+    };
+
+    E_Super.prototype.setTopology = function(_topology) {
+      this._topology = _topology;
+    };
+
+    E_Super.prototype.getTopology = function() {
+      return this._topology;
+    };
+
+    E_Super.prototype.addVisual = function(subview) {
+      return this._view.add(subview);
+    };
+
+    E_Super.prototype.removeVisual = function(subview) {
+      return this._view.remove(subview);
+    };
+
+    E_Super.prototype.addCollisionPolygons = function(polygons) {
+      var aPolygon, i, len, results;
+      results = [];
+      for (i = 0, len = polygons.length; i < len; i++) {
+        aPolygon = polygons[i];
+        results.push(this.addCollisionPolygon(aPolygon));
+      }
+      return results;
+    };
+
+    E_Super.prototype.addCollisionPolygon = function(polygon) {
+      return this._bvh.add(polygon);
+    };
+
+    E_Super.prototype.removeCollisionPolygons = function(polygons) {
+      var aPolygon, i, len, results;
+      results = [];
+      for (i = 0, len = polygons.length; i < len; i++) {
+        aPolygon = polygons[i];
+        results.push(this.removeCollisionPolygon(aPolygon));
+      }
+      return results;
+    };
+
+    E_Super.prototype.removeCollisionPolygon = function(polygon) {
+      return this._bvh.remove(polygon);
+    };
+
+    E_Super.prototype.generateBVH = function() {
+      var polylines;
+      polylines = this.to_collision_polygons();
+      return this._bvh = new BDS.BVH2D(polylines);
+    };
+
+    E_Super.prototype.generateCollisionPolygon = function() {
+      this._collision_polygon = this._bvh.toBoundingBox().toPolyline();
+      return this._collision_polygon;
+    };
+
+    E_Super.prototype.getCollisionPolygon = function() {
+      if (this._collision_polygon === null) {
+        this.generateCollisionPolygon();
+      }
+      return this._collision_polygon;
+    };
+
+    E_Super.prototype.to_collision_polygons = function(output) {
+      var a, b, c, face, faces, geometry, i, j, len, len1, localToWorld, mesh, mesh_list, obj, polyline, polyline_list, vertices;
+      obj = this._view;
+      mesh_list = this._to_mesh_list(obj);
+      polyline_list = [];
+      if (output !== void 0) {
+        polyline_list = output;
+      }
+      for (i = 0, len = mesh_list.length; i < len; i++) {
+        mesh = mesh_list[i];
+        geometry = mesh.geometry;
+        vertices = geometry.vertices;
+        faces = geometry.faces;
+        localToWorld = mesh.matrixWorld;
+        for (j = 0, len1 = faces.length; j < len1; j++) {
+          face = faces[j];
+          a = vertices[face.a].clone();
+          b = vertices[face.b].clone();
+          c = vertices[face.c].clone();
+          a.applyMatrix4(localToWorld);
+          b.applyMatrix4(localToWorld);
+          c.applyMatrix4(localToWorld);
+          a = this._vector_to_point(a);
+          b = this._vector_to_point(b);
+          c = this._vector_to_point(c);
+          polyline = new BDS.Polyline(true, [a, b, c]);
+          polyline.setAssociatedData(this);
+          polyline_list.push(polyline);
+        }
+      }
+      return polyline_list;
+    };
+
+    E_Super.prototype._vector_to_point = function(vec) {
+      return new BDS.Point(vec.x, vec.y, vec.z);
+    };
+
+    E_Super.prototype._to_mesh_list = function(obj) {
+      var add_output, output;
+      output = [];
+      add_output = function(o) {
+        if (o.geometry) {
+          return output.push(o);
+        }
+      };
+      obj.traverse(add_output);
+      return output;
+    };
+
+    E_Super.prototype.setFillColor = function(c) {
+      var err;
+      err = new Error("This method should be overriden in a subclass.");
+      console.log(err.stack);
+      debugger;
+      throw err;
+    };
+
+    E_Super.prototype.revertFillColor = function() {
+      var err;
+      err = new Error("This method should be overriden in a subclass.");
+      console.log(err.stack);
+      debugger;
+      throw err;
     };
 
     return E_Super;
@@ -98,31 +236,26 @@ TSAG = {};
   TSAG.E_Intersection = (function(superClass) {
     extend(E_Intersection, superClass);
 
-    function E_Intersection(s_vertex, position) {
+    function E_Intersection(position) {
       var fill, sx, sy, view;
       E_Intersection.__super__.constructor.call(this);
-      this._vertex = s_vertex;
       this._position = position;
       fill = TSAG.style.unit_meshes.newSquare({
         color: TSAG.style.c_road_fill
       });
-      fill.position.copy(this._position.clone());
+      fill.position.copy(new THREE.Vector3(position.x, position.y, 0));
       sx = sy = TSAG.style.road_offset_amount * 2;
       fill.scale.copy(new THREE.Vector3(sx, sy, 1));
       view = this.getVisual();
       view.add(fill);
       view.position.z = TSAG.style.dz_intersection;
+      this.generateBVH();
     }
 
     E_Intersection.prototype.addRoad = function(road) {
       var edge;
       edge = road.getEdge();
-      this._vertex.addEdge(edge);
       return true;
-    };
-
-    E_Intersection.prototype.getVertex = function() {
-      return this._vertex;
     };
 
     return E_Intersection;
@@ -139,65 +272,37 @@ TSAG = {};
   TSAG.E_Network = (function(superClass) {
     extend(E_Network, superClass);
 
-    function E_Network() {
+    function E_Network(graph) {
       E_Network.__super__.constructor.call(this);
-      this._bvh_needs_update = true;
-      this._bvh = null;
-      this._network_topology = new TSAG.S_Network_Topology();
-      this._intersections = [];
-      this._roads = [];
+      this.setTopology(graph);
+      this._network_processor = new SCRIB.PolylineGraphPostProcessor(graph);
     }
 
-    E_Network.prototype.newRoad = function(x, y) {
-      var edge, intersection, road, vertex, visual;
-      this._BVH = new TSAG.S_AABVH(this.getVisual(), {
-        val: 'x',
-        dim: 2
-      });
-      intersection = this.newIntersection(x, y);
-      vertex = intersection.getVertex();
-      edge = this._network_topology.newEdge();
-      edge.setStartVert(vertex);
-      road = new TSAG.E_Road(edge);
-      edge.setElement(road);
-      this._roads.push(road);
-      visual = this.getVisual();
-      visual.add(road.getVisual());
-      return road;
+    E_Network.prototype.query_elements_pt = function(x, y) {
+      var elements, i, len, polyline, polylines;
+      polylines = this._bvh.query_point_all(new BDS.Point(x, y));
+      elements = [];
+      for (i = 0, len = polylines.length; i < len; i++) {
+        polyline = polylines[i];
+        elements.push(polyline.getAssociatedData());
+      }
+      return elements;
     };
 
-    E_Network.prototype.newIntersection = function(x, y) {
-      var intersection, position, vertex, visual;
-      this._BVH = new TSAG.S_AABVH(this.getVisual(), {
-        val: 'x',
-        dim: 2
-      });
-      vertex = this._network_topology.newVertex();
-      position = new THREE.Vector3(x, y, 0);
-      intersection = new TSAG.E_Intersection(vertex, position);
-      vertex.setElement(intersection);
-      this._intersections.push(intersection);
-      visual = this.getVisual();
-      visual.add(intersection.getVisual());
-      return intersection;
+    E_Network.prototype.query_elements_box = function(box) {
+      var elements, i, len, polyline, polylines;
+      polylines = this._bvh.query_box_all(box);
+      elements = [];
+      for (i = 0, len = polylines.length; i < len; i++) {
+        polyline = polylines[i];
+        elements.push(polyline.getAssociatedData());
+      }
+      return elements;
     };
 
-    E_Network.prototype.query_road = function(x, y) {
-      var element, model, triangle;
-      triangle = this._BVH.query_point(x, y);
-      if (triangle === null) {
-        return null;
-      }
-      triangle.mesh.material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
-      model = triangle.model;
-      element = triangle.mesh.element;
-      if (element instanceof TSAG.E_Intersection) {
-        return null;
-      }
-      if (model instanceof TSAG.M_Road) {
-        return model;
-      }
-      return null;
+    E_Network.prototype.newTopology_vertex = function() {
+      var graph;
+      graph = this.getTopology();
     };
 
     return E_Network;
@@ -214,14 +319,14 @@ TSAG = {};
   TSAG.E_Road = (function(superClass) {
     extend(E_Road, superClass);
 
-    function E_Road(edge) {
+    function E_Road() {
       var visual;
       E_Road.__super__.constructor.call(this);
-      this._edge = edge;
       this._main_curve = new TSAG.S_Curve();
       visual = this.getVisual();
       visual.position.z = TSAG.style.dz_road;
       this._road_visual = null;
+      this._center_polyline = null;
     }
 
     E_Road.prototype.addPoint = function(pt) {
@@ -238,6 +343,11 @@ TSAG = {};
     };
 
     E_Road.prototype.updateDiscretization = function(max_length) {
+      this.updateVisual(max_length);
+      return this.generateBVH();
+    };
+
+    E_Road.prototype.updateVisual = function(max_length) {
       var fill_geometry, fill_material, fill_mesh, left_line, material, middle_line, middle_material, offset_amount, right_line, times_left, times_right, verts_left, verts_right, visual;
       offset_amount = TSAG.style.road_offset_amount;
       this._main_curve.updateDiscretization(max_length);
@@ -251,6 +361,7 @@ TSAG = {};
       middle_material.color = TSAG.style.c_road_midline;
       middle_line = new THREE.Geometry();
       middle_line.vertices = this._main_curve.getDiscretization();
+      this._center_polyline = this._THREE_vertex_list_to_BDS_Polyline(middle_line.vertices);
       times_left = [];
       times_right = [];
       verts_left = [];
@@ -264,12 +375,21 @@ TSAG = {};
       fill_geometry = this._get_fill_geometry(verts_left, verts_right, times_left, times_right);
       fill_material = TSAG.style.m_default_fill.clone();
       fill_material.color = TSAG.style.c_road_fill;
+      this.fill_material = fill_material;
       fill_mesh = new THREE.Mesh(fill_geometry, fill_material);
       fill_mesh.position.z = -.01;
       this._road_visual.add(fill_mesh);
       this._road_visual.add(new THREE.Line(middle_line, middle_material));
       this._road_visual.add(new THREE.Line(left_line, material));
       return this._road_visual.add(new THREE.Line(right_line, material));
+    };
+
+    E_Road.prototype.setFillColor = function(c) {
+      return this.fill_material.color = c;
+    };
+
+    E_Road.prototype.revertFillColor = function() {
+      return this.fill_material.color = TSAG.style.c_road_fill;
     };
 
     E_Road.prototype._get_fill_geometry = function(left_verts, right_verts, times_left, times_right) {
@@ -305,6 +425,20 @@ TSAG = {};
         continue;
       }
       return output;
+    };
+
+    E_Road.prototype.getCenterPolyline = function() {
+      return this._center_polyline;
+    };
+
+    E_Road.prototype._THREE_vertex_list_to_BDS_Polyline = function(vectors) {
+      var i, len, out, vec;
+      out = new BDS.Polyline();
+      for (i = 0, len = vectors.length; i < len; i++) {
+        vec = vectors[i];
+        out.addPoint(new BDS.Point(vec.x, vec.y));
+      }
+      return out;
     };
 
     return E_Road;
@@ -436,13 +570,23 @@ TSAG = {};
       this._min_dist = TSAG.style.user_input_min_move;
       this.road = null;
       this.next_point = null;
+      this.network = this.e_scene.getNetwork();
+      this.intersections_perm = [];
+      this.intersections_temp = [];
     }
 
+    I_Mouse_Build_Road.prototype.isIdle = function() {
+      return this.state === "idle";
+    };
+
     I_Mouse_Build_Road.prototype.mouse_down = function(event) {
-      var dist, max_length, pos;
+      var dist, intersection, pos;
       if (this.state === "idle") {
-        this.network = this.e_scene.getNetwork();
-        this.road = this.network.newRoad(event.x, event.y);
+        this.road = new TSAG.E_Road();
+        this.network.addVisual(this.road.getVisual());
+        intersection = new TSAG.E_Intersection(new BDS.Point(event.x, event.y));
+        this.network.addVisual(intersection.getVisual());
+        this.intersections_perm.push(intersection);
         this.road.addPoint(new THREE.Vector3(event.x, event.y, 0));
         this.next_point = new THREE.Vector3(event.x, event.y + 1, 0);
         this.road.addPoint(this.next_point);
@@ -460,11 +604,7 @@ TSAG = {};
           this._mousePrevious.x = event.x;
           return this._mousePrevious.y = event.y;
         } else {
-          this.road.removeLastPoint();
-          this.state = "idle";
-          max_length = TSAG.style.discretization_length;
-          this.road.updateDiscretization(max_length);
-          return this.road = null;
+          return this.finish();
         }
       }
     };
@@ -472,20 +612,148 @@ TSAG = {};
     I_Mouse_Build_Road.prototype.mouse_up = function(event) {};
 
     I_Mouse_Build_Road.prototype.mouse_move = function(event) {
-      var max_length, road_model;
+      var max_length;
       if (this.state === "building") {
         this.next_point.x = event.x + .01;
         this.next_point.y = event.y + .01;
         max_length = TSAG.style.discretization_length;
         this.road.updateDiscretization(max_length);
-        road_model = this.network.query_road(event.x, event.y);
-        if (road_model !== null) {
-          return this.network.newIntersection(road_model.getPosition());
-        }
+        return this.updateTempIntersections();
       }
     };
 
+    I_Mouse_Build_Road.prototype.finish = function() {
+      var i, intersection, isect, len, max_length, ref;
+      if (this.state !== "building") {
+        return;
+      }
+      this.road.removeLastPoint();
+      this.state = "idle";
+      max_length = TSAG.style.discretization_length;
+      this.road.updateDiscretization(max_length);
+      intersection = new TSAG.E_Intersection(new BDS.Point(this._mousePrevious.x, this._mousePrevious.y));
+      this.network.addVisual(intersection.getVisual());
+      this.intersections_perm.push(intersection);
+      this.network.addCollisionPolygons(this.road.to_collision_polygons());
+      ref = this.intersections_perm;
+      for (i = 0, len = ref.length; i < len; i++) {
+        isect = ref[i];
+        this.network.addCollisionPolygon(isect.getCollisionPolygon());
+      }
+      this.road = null;
+      this.intersections_temp = [];
+      return this.intersections_perm = [];
+    };
+
+    I_Mouse_Build_Road.prototype.updateTempIntersections = function() {
+      this.destroyTempIntersections();
+      return this.createTempIntersections();
+    };
+
+    I_Mouse_Build_Road.prototype.createTempIntersections = function() {
+      var collision_polygon, e_polyline, elem, elements, i, isect, isect_pts, j, len, len1, polyline, pt, query_box;
+      polyline = this.road.getCenterPolyline();
+      collision_polygon = this.road.generateCollisionPolygon();
+      query_box = collision_polygon.generateBoundingBox();
+      elements = this.network.query_elements_box(query_box);
+      for (i = 0, len = elements.length; i < len; i++) {
+        elem = elements[i];
+        if (elem instanceof TSAG.E_Road) {
+          e_polyline = elem.getCenterPolyline();
+          isect_pts = polyline.report_intersections_with_polyline(e_polyline);
+          for (j = 0, len1 = isect_pts.length; j < len1; j++) {
+            pt = isect_pts[j];
+            isect = new TSAG.E_Intersection(pt);
+            this.intersections_temp.push(isect);
+            this.network.addVisual(isect.getVisual());
+            this.network.addCollisionPolygon(isect.getCollisionPolygon());
+          }
+        }
+      }
+
+      /*
+       * Add intersections every time the mouse cursor intersects an older road.
+      road_model = @network.query_road(event.x, event.y)
+      if road_model != null
+          @network.newIntersection(road_model.getPosition())
+       */
+    };
+
+    I_Mouse_Build_Road.prototype.destroyTempIntersections = function() {
+      var collision_polygon, i, isect, len, ref, results;
+      ref = this.intersections_temp;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        isect = ref[i];
+        this.network.removeVisual(isect.getVisual());
+        collision_polygon = isect.getCollisionPolygon();
+        results.push(this.network.removeCollisionPolygon(collision_polygon));
+      }
+      return results;
+    };
+
     return I_Mouse_Build_Road;
+
+  })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+(function() {
+  TSAG.I_Mouse_Highlight = (function() {
+    function I_Mouse_Highlight(e_scene, camera) {
+      this.e_scene = e_scene;
+      this.camera = camera;
+      this.network = this.e_scene.getNetwork();
+      this.previous_elements = [];
+    }
+
+    I_Mouse_Highlight.prototype.isIdle = function() {
+      return true;
+    };
+
+    I_Mouse_Highlight.prototype.finish = function() {
+      var prev_elem, results;
+      results = [];
+      while (this.previous_elements.length > 0) {
+        prev_elem = this.previous_elements.pop();
+        results.push(prev_elem.revertFillColor());
+      }
+      return results;
+    };
+
+    I_Mouse_Highlight.prototype.mouse_down = function(event) {
+      if (this.previous_elements.length > 0) {
+
+        /*
+        @network.removeVisual(@previous_element.getVisual())
+        @network.removeCollisionPolygon(@previous_element.getCollisionPolygon())
+        #@network.removeTopology
+         */
+      }
+    };
+
+    I_Mouse_Highlight.prototype.mouse_up = function(event) {};
+
+    I_Mouse_Highlight.prototype.mouse_move = function(event) {
+      var elem, elems, i, len, results, road;
+      this.finish();
+      elems = this.network.query_elements_pt(event.x, event.y);
+      results = [];
+      for (i = 0, len = elems.length; i < len; i++) {
+        elem = elems[i];
+        if (elem instanceof TSAG.E_Road) {
+          road = elem;
+          road.setFillColor(TSAG.style.highlight);
+          results.push(this.previous_elements.push(road));
+        } else {
+          results.push(void 0);
+        }
+      }
+      return results;
+    };
+
+    return I_Mouse_Highlight;
 
   })();
 
@@ -505,6 +773,10 @@ TSAG = {};
 
     I_Mouse_Interface.prototype.mouse_move = function(event) {};
 
+    I_Mouse_Interface.prototype.isIdle = function() {};
+
+    I_Mouse_Interface.prototype.finish = function() {};
+
     return I_Mouse_Interface;
 
   })();
@@ -519,7 +791,8 @@ TSAG = {};
       this.camera = camera;
       this.create_cursor();
       this.road_build_controller = new TSAG.I_Mouse_Build_Road(this.scene, this.camera);
-      this._current_mouse_input_controller = this.road_build_controller;
+      this.highlight_controller = new TSAG.I_Mouse_Highlight(this.scene, this.camera);
+      this._current_mouse_input_controller = this.highlight_controller;
       this.state = "idle";
       this._min_dist = 10;
     }
@@ -543,6 +816,9 @@ TSAG = {};
     };
 
     I_Mouse_Main.prototype.mouse_down = function(event) {
+      if (this._current_mouse_input_controller !== this.road_build_controller && this._current_mouse_input_controller.isIdle()) {
+        this.switchController(this.road_build_controller);
+      }
       return this._current_mouse_input_controller.mouse_down(event);
     };
 
@@ -552,10 +828,18 @@ TSAG = {};
 
     I_Mouse_Main.prototype.mouse_move = function(event) {
       var pos;
+      if (this._current_mouse_input_controller !== this.highlight_controller && this._current_mouse_input_controller.isIdle()) {
+        this.switchController(this.highlight_controller);
+      }
       pos = this.pointer.position;
       pos.x = event.x;
       pos.y = event.y;
       return this._current_mouse_input_controller.mouse_move(event);
+    };
+
+    I_Mouse_Main.prototype.switchController = function(controller) {
+      this._current_mouse_input_controller.finish();
+      return this._current_mouse_input_controller = controller;
     };
 
     return I_Mouse_Main;
@@ -1198,7 +1482,8 @@ TSAG = {};
       cursor_circle_z: 1,
       cursor_circle_color: new THREE.Color(0xff0000),
       dz_intersection: 0.01,
-      dz_road: 0
+      dz_road: 0,
+      highlight: new THREE.Color(0x0000ff)
     };
     return TSAG.style.unit_meshes = new TSAG.Unit_Meshes();
   };
