@@ -5,29 +5,32 @@
 # Written by Bryce Summers on 1 - 31 - 2017.
 #
 # Purpose: This class specifies the gameplay and aesthetic properties of building objects.
+#
 ###
 
 class TSAG.E_Car extends TSAG.E_Super
 
-    constructor: (position, scale, rotation_z) ->
+    constructor: (scale) ->
 
         super()
+        @createVisual(scale)
+
+        # Lane navigation variables.
+        @distance = 0.0    # The Distance this car has travelled along this lane.
+        @segment_index = 0 # The index of the segement that this car is on.
+        @next_car = null
+
+    createVisual: (scale) ->
 
         view = @getVisual()
 
-        _position = position
-        _rz = rotation_z
-
         # Allocate a new square mesh, reusing the same unit square geometry.
         mesh = @_newCar({color: TSAG.style.c_car_fill})
-
-        mesh.position.copy(position.clone())
-        mesh.scale.copy(scale.clone())
-
-        # Enough rotation to cover all distinct orientations of the house under symmetry.
-        mesh.rotation.z = rotation_z
-
         view.add(mesh)
+
+        view.position.z = TSAG.style.dz_cars
+
+        @setScale(scale)
 
     # Construct a house object from a square and a triangle.
     _newCar: (params) ->

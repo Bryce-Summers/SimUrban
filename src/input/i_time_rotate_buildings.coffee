@@ -8,11 +8,12 @@ Written by Bryce Summmers on 1 - 31 - 2017.
 
 ###
 
-class TSAG.I_Time_Main extends TSAG.Input_Controller
+class TSAG.I_Time_Rotate_Buildings extends TSAG.Input_Controller
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js
     constructor: (@scene, @camera) ->
+        super()
 
     time: (dt) ->
 
@@ -20,4 +21,4 @@ class TSAG.I_Time_Main extends TSAG.Input_Controller
         buildings = @scene.getBuildings()
 
         for element in buildings
-            element.rotateBuilding(.001)
+            element.rotateBuilding(.01)

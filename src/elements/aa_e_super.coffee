@@ -160,3 +160,15 @@ class TSAG.E_Super
         console.log(err.stack)
         debugger
         throw err
+
+    setPosition: (position) ->
+        z = @_view.position.z
+        @_view.position.copy(position.clone())
+        @_view.position.z = z
+    
+    setRotation: (rotation_z) ->
+        @_view.rotation.z = rotation_z
+
+    setScale: (scale) ->
+
+        @_view.scale.copy(scale.clone())

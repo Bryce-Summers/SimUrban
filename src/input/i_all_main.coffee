@@ -12,6 +12,8 @@ class TSAG.I_All_Main extends TSAG.Input_Controller
     # THREE.js
     constructor: (@scene, @camera) ->
 
+        super()
+
         # Thus far, the only thing that we do is initialize the mouse input pipeline.
         @_mouse_input = new TSAG.I_Mouse_Main(@scene, @camera)
         @add_mouse_input_controller(@_mouse_input)

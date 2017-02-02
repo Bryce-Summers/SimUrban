@@ -25,7 +25,10 @@ class TSAG.E_Network extends TSAG.E_Super
 
         # FIXME: We shouldn't need these, since they will be associated with topological elements.
         #@_intersections = []
-        #@_roads         = []
+        @roads = []
+
+    getRoads : () ->
+        return @roads
 
     # The network exposes an interface for the following kinds of actions:
     # From aa_e_super interface.

@@ -146,3 +146,12 @@ class TSAG.S_Curve
             continue
         
         return output
+
+    threeVectorsToBDSPolyline: (vecs) ->
+
+        polyline = new BDS.Polyline(false)
+
+        for vec in vecs
+            polyline.addPoint(new BDS.Point(vec.x, vec.y))
+
+        return polyline

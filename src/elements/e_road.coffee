@@ -20,8 +20,10 @@ class TSAG.E_Road extends TSAG.E_Super
         visual.position.z = TSAG.style.dz_road
 
         @_road_visual = null
-
         @_center_polyline = null
+
+        @lanes = []
+
 
     # Extends this road to include the given point.
     # returns false if the given point produces illegal road geometry.
@@ -42,6 +44,9 @@ class TSAG.E_Road extends TSAG.E_Super
         @updateVisual(max_length)
         @generateBVH()
 
+
+    # Max length is the maximum length per segment.
+    # FIXME: I should instead scale segments with curvature.
     updateVisual: (max_length) ->
 
         offset_amount = TSAG.style.road_offset_amount
@@ -92,6 +97,27 @@ class TSAG.E_Road extends TSAG.E_Super
         @_road_visual.add(new THREE.Line( middle_line, middle_material ))
         @_road_visual.add(new THREE.Line( left_line,   material ))
         @_road_visual.add(new THREE.Line( right_line,  material ))
+
+        # Update the mathematical model for car movement along lanes.
+        @updateLaneStructures(max_length, offset_amount, times_left, times_right)
+
+    updateLaneStructures: (max_length, offset_amount, times_left, times_right) ->
+        # Update Lane Structures.
+        left_lane_vectors  = @_main_curve.getOffsets(max_length,  offset_amount/2, times_left)
+        right_lane_vectors = @_main_curve.getOffsets(max_length, -offset_amount/2, times_right)
+
+        left_lane_polyline  = @_main_curve.threeVectorsToBDSPolyline(left_lane_vectors)
+        right_lane_polyline = @_main_curve.threeVectorsToBDSPolyline(right_lane_vectors)
+
+        # FIXME: Flips these if we are in Brittain.
+        # Over here in the U.S. we drive on the right side of the road.
+        left_lane  = new TSAG.S_Lane(left_lane_polyline,  true)
+        right_lane = new TSAG.S_Lane(right_lane_polyline, false)
+
+        @lanes = []
+        @lanes.push(left_lane)
+        @lanes.push(right_lane)
+
 
     # THREE.Color -> sets this material's fill color.
     setFillColor: (c) ->
@@ -161,3 +187,5 @@ class TSAG.E_Road extends TSAG.E_Super
 
         return out
 
+    getLanes: () ->
+        return @lanes

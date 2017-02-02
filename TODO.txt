@@ -25,3 +25,7 @@ Discretize at different levels of prescision absed on viewport and whether we ar
 NewVertex.
 
 Link Vertices.
+
+Unit test Bryce Data Structures.
+
+Standardize the mechanisms for destroying elements.

@@ -47,5 +47,7 @@ class TSAG.E_Building extends TSAG.E_Super
         return node;
 
     rotateBuilding: (dr) ->
-        mesh.rotation.z += dr
+        @getVisual().remove(@_mesh)
+        @_mesh.rotation.z = @_mesh.rotation.z + dr
+        @getVisual().add(@_mesh)
 

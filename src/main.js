@@ -107,11 +107,11 @@ function timestep()
 
     try
     {
-        INPUT.time(dt)
+        input.time(dt)
     }
     catch(err)
     { // Stop time on error.
-        INPUT.time_on = false
+        TIME_ON = false
         throw err
     }
 

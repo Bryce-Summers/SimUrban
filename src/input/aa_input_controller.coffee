@@ -92,7 +92,7 @@ class TSAG.Input_Controller
     time: (dt) ->
     
         len = @_time_input_controllers.length
-        for (var i = 0; i < len; i++)
+        for i in [0...len]
         
             controller = @_time_input_controllers[i]
             controller.time(dt)

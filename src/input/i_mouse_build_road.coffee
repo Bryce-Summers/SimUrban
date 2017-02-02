@@ -135,6 +135,9 @@ class TSAG.I_Mouse_Build_Road
         for isect in @intersections_perm
             @network.addCollisionPolygon(isect.getCollisionPolygon())
 
+        # FIXME: Make a better way of managing roads.
+        @network.roads.push(@road)
+
         # Preserve the road object.
         @road = null
 
