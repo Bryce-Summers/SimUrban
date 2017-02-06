@@ -4,7 +4,7 @@
 # 
 # Written by Bryce Summers on 12 - 19 - 2016.
 #
-# Purpose: This class specifies the gameplay andd aesthetic properties of building objects.
+# Purpose: This class specifies the gameplay and aesthetic properties of building objects.
 ###
 
 class TSAG.E_Building extends TSAG.E_Super
@@ -27,6 +27,7 @@ class TSAG.E_Building extends TSAG.E_Super
         # Enough rotation to cover all distinct orientations of the house under symmetry.
         mesh.rotation.z = rotation_z
 
+        @_mesh = mesh
         view.add(mesh)
 
     # Construct a house object from a square and a triangle.
@@ -44,3 +45,9 @@ class TSAG.E_Building extends TSAG.E_Super
         node.add(triangle);
 
         return node;
+
+    rotateBuilding: (dr) ->
+        @getVisual().remove(@_mesh)
+        @_mesh.rotation.z = @_mesh.rotation.z + dr
+        @getVisual().add(@_mesh)
+

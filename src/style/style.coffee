@@ -22,6 +22,9 @@ TSAG.init_style = () ->
         # Colors.
         c_building_fill:      new THREE.Color(0xaaaaaa),
         c_building_outline:   new THREE.Color(0x000000),
+
+        c_car_fill:           new THREE.Color(0x00aaaa),
+
         c_road_fill:          new THREE.Color(0x888888),
         c_road_midline:       new THREE.Color(0x514802),
         c_road_outline:       new THREE.Color(0x000000),
@@ -34,7 +37,11 @@ TSAG.init_style = () ->
 
         # Depth Order.
         dz_intersection: 0.01,
-        dz_road: 0
+        dz_road: 0,
+
+        dz_cars: .02,
+
+        highlight: new THREE.Color(0x0000ff)
     }
 
     # Unit Geometries for rendering.

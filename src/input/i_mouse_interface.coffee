@@ -19,3 +19,10 @@ class TSAG.I_Mouse_Interface
     mouse_up:   (event) ->
 
     mouse_move: (event) ->
+
+    # Returns true iff this controller is in a resting state and may easily be finished and switched for a different controller.
+    isIdle: () ->
+
+    # Completes all actions, such that it is safe to switch controllers.
+    finish: () ->
+

@@ -4,26 +4,26 @@
 # Written by Bryce Summers on 12 - 19 - 2016.
 # This class represents Road elements.
 #
-#
 
 class TSAG.E_Road extends TSAG.E_Super
 
-    constructor: (edge) ->
+    constructor: () ->
 
         super()
-
-        # Link to the network edge, this can then be used to find the starting, ending locations,
-        # and other network connectivity relationships.
-        @_edge  = edge
 
         # The main curve is used to determine the geometric embedding of the middle curve on the road.
         # It is modifiable by a user and is used to compute all other offset curves.
         @_main_curve = new TSAG.S_Curve()
 
+        # Set road elements to the proper depth.
         visual = @getVisual()
         visual.position.z = TSAG.style.dz_road
 
         @_road_visual = null
+        @_center_polyline = null
+
+        @lanes = []
+
 
     # Extends this road to include the given point.
     # returns false if the given point produces illegal road geometry.
@@ -41,7 +41,14 @@ class TSAG.E_Road extends TSAG.E_Super
         return @_main_curve.position(time)
 
     updateDiscretization: (max_length) ->
-   
+        @updateVisual(max_length)
+        @generateBVH()
+
+
+    # Max length is the maximum length per segment.
+    # FIXME: I should instead scale segments with curvature.
+    updateVisual: (max_length) ->
+
         offset_amount = TSAG.style.road_offset_amount
         @_main_curve.updateDiscretization(max_length)
 
@@ -62,6 +69,7 @@ class TSAG.E_Road extends TSAG.E_Super
 
         middle_line = new THREE.Geometry()
         middle_line.vertices = @_main_curve.getDiscretization()
+        @_center_polyline    = @_THREE_vertex_list_to_BDS_Polyline(middle_line.vertices)
         
         times_left  = []
         times_right = []
@@ -81,12 +89,42 @@ class TSAG.E_Road extends TSAG.E_Super
         fill_material = TSAG.style.m_default_fill.clone()
         fill_material.color = TSAG.style.c_road_fill
 
+        @fill_material = fill_material
+
         fill_mesh = new THREE.Mesh( fill_geometry, fill_material )
         fill_mesh.position.z = -.01 # Draw dill behind.
         @_road_visual.add(fill_mesh)
         @_road_visual.add(new THREE.Line( middle_line, middle_material ))
         @_road_visual.add(new THREE.Line( left_line,   material ))
         @_road_visual.add(new THREE.Line( right_line,  material ))
+
+        # Update the mathematical model for car movement along lanes.
+        @updateLaneStructures(max_length, offset_amount, times_left, times_right)
+
+    updateLaneStructures: (max_length, offset_amount, times_left, times_right) ->
+        # Update Lane Structures.
+        left_lane_vectors  = @_main_curve.getOffsets(max_length,  offset_amount/2, times_left)
+        right_lane_vectors = @_main_curve.getOffsets(max_length, -offset_amount/2, times_right)
+
+        left_lane_polyline  = @_main_curve.threeVectorsToBDSPolyline(left_lane_vectors)
+        right_lane_polyline = @_main_curve.threeVectorsToBDSPolyline(right_lane_vectors)
+
+        # FIXME: Flips these if we are in Brittain.
+        # Over here in the U.S. we drive on the right side of the road.
+        left_lane  = new TSAG.S_Lane(left_lane_polyline,  true)
+        right_lane = new TSAG.S_Lane(right_lane_polyline, false)
+
+        @lanes = []
+        @lanes.push(left_lane)
+        @lanes.push(right_lane)
+
+
+    # THREE.Color -> sets this material's fill color.
+    setFillColor: (c) ->
+        @fill_material.color = c
+
+    revertFillColor: () ->
+        @fill_material.color = TSAG.style.c_road_fill
 
     # Creates a fill polygon based on the input times.
     # Due to line curvature, vertices at higher curvature regions will exhibit higher degrees in this polygonalization.
@@ -136,3 +174,18 @@ class TSAG.E_Road extends TSAG.E_Super
 
         # THREE.Geometry
         return output
+
+    getCenterPolyline : () ->
+        return @_center_polyline
+
+    # THREE.Vector3[] -> BDS.Polyline
+    _THREE_vertex_list_to_BDS_Polyline: (vectors) ->
+        out = new BDS.Polyline()
+
+        for vec in vectors
+            out.addPoint(new BDS.Point(vec.x, vec.y))
+
+        return out
+
+    getLanes: () ->
+        return @lanes

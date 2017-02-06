@@ -73,6 +73,48 @@ function init_input()
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mouseup",   onMouseUp);
+
+    // The current system time, used to correctly pass time deltas.
+    TIMESTAMP = performance.now();
+
+    // Initialize Time input.
+    beginTime();
+
+    TIME_ON = true;
+}
+
+function beginTime()
+{
+    TIMESTAMP = performance.now();
+    TIME_ON   = true;
+    timestep();
+}
+
+function timestep()
+{
+    if(TIME_ON)
+    {
+        requestAnimationFrame(timestep)
+    }
+    else
+    {
+        return;
+    }
+
+    time_new = performance.now()
+    var dt = time_new - TIMESTAMP
+    TIMESTAMP = time_new
+
+    try
+    {
+        input.time(dt)
+    }
+    catch(err)
+    { // Stop time on error.
+        TIME_ON = false
+        throw err
+    }
+
 }
 
 // Events.

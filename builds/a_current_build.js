@@ -1,5 +1,5 @@
 /*! Sim Urban, a project by Bryce Summers.
- *  Single File concatenated by Grunt Concatenate on 20-12-2016
+ *  Single File concatenated by Grunt Concatenate on 02-02-2017
  */
 /*
  * Defines the Traffic Simulation and Game namespace.
@@ -16,6 +16,9 @@ TSAG = {};
  *
  * Written by Bryce Summers on 12 - 19 - 2016.
  *
+ * Some Elements will have pointers to Scribble Elements.
+ * All elements contain an @_view object that is a renderable THREE.js scene node.
+ * All elements also contain an BDS.AABVH @_BVH object that stores versions of this element's geometry for collision detection.
  */
 
 (function() {
@@ -25,11 +28,161 @@ TSAG = {};
       if (!this._view) {
         this._view = new THREE.Object3D();
       }
-      this._BVH = null;
+      this._bvh = new BDS.BVH2D();
+      this._collision_polygon = null;
+      if (!this._topology) {
+        this._topology = null;
+      }
     }
+
+    E_Super.prototype.isTemporary = function() {
+      return this._topology === null;
+    };
 
     E_Super.prototype.getVisual = function() {
       return this._view;
+    };
+
+    E_Super.prototype.setTopology = function(_topology) {
+      this._topology = _topology;
+    };
+
+    E_Super.prototype.getTopology = function() {
+      return this._topology;
+    };
+
+    E_Super.prototype.addVisual = function(subview) {
+      return this._view.add(subview);
+    };
+
+    E_Super.prototype.removeVisual = function(subview) {
+      return this._view.remove(subview);
+    };
+
+    E_Super.prototype.addCollisionPolygons = function(polygons) {
+      var aPolygon, i, len, results;
+      results = [];
+      for (i = 0, len = polygons.length; i < len; i++) {
+        aPolygon = polygons[i];
+        results.push(this.addCollisionPolygon(aPolygon));
+      }
+      return results;
+    };
+
+    E_Super.prototype.addCollisionPolygon = function(polygon) {
+      return this._bvh.add(polygon);
+    };
+
+    E_Super.prototype.removeCollisionPolygons = function(polygons) {
+      var aPolygon, i, len, results;
+      results = [];
+      for (i = 0, len = polygons.length; i < len; i++) {
+        aPolygon = polygons[i];
+        results.push(this.removeCollisionPolygon(aPolygon));
+      }
+      return results;
+    };
+
+    E_Super.prototype.removeCollisionPolygon = function(polygon) {
+      return this._bvh.remove(polygon);
+    };
+
+    E_Super.prototype.generateBVH = function() {
+      var polylines;
+      polylines = this.to_collision_polygons();
+      return this._bvh = new BDS.BVH2D(polylines);
+    };
+
+    E_Super.prototype.generateCollisionPolygon = function() {
+      this._collision_polygon = this._bvh.toBoundingBox().toPolyline();
+      return this._collision_polygon;
+    };
+
+    E_Super.prototype.getCollisionPolygon = function() {
+      if (this._collision_polygon === null) {
+        this.generateCollisionPolygon();
+      }
+      return this._collision_polygon;
+    };
+
+    E_Super.prototype.to_collision_polygons = function(output) {
+      var a, b, c, face, faces, geometry, i, j, len, len1, localToWorld, mesh, mesh_list, obj, polyline, polyline_list, vertices;
+      obj = this._view;
+      mesh_list = this._to_mesh_list(obj);
+      polyline_list = [];
+      if (output !== void 0) {
+        polyline_list = output;
+      }
+      for (i = 0, len = mesh_list.length; i < len; i++) {
+        mesh = mesh_list[i];
+        geometry = mesh.geometry;
+        vertices = geometry.vertices;
+        faces = geometry.faces;
+        localToWorld = mesh.matrixWorld;
+        for (j = 0, len1 = faces.length; j < len1; j++) {
+          face = faces[j];
+          a = vertices[face.a].clone();
+          b = vertices[face.b].clone();
+          c = vertices[face.c].clone();
+          a.applyMatrix4(localToWorld);
+          b.applyMatrix4(localToWorld);
+          c.applyMatrix4(localToWorld);
+          a = this._vector_to_point(a);
+          b = this._vector_to_point(b);
+          c = this._vector_to_point(c);
+          polyline = new BDS.Polyline(true, [a, b, c]);
+          polyline.setAssociatedData(this);
+          polyline_list.push(polyline);
+        }
+      }
+      return polyline_list;
+    };
+
+    E_Super.prototype._vector_to_point = function(vec) {
+      return new BDS.Point(vec.x, vec.y, vec.z);
+    };
+
+    E_Super.prototype._to_mesh_list = function(obj) {
+      var add_output, output;
+      output = [];
+      add_output = function(o) {
+        if (o.geometry) {
+          return output.push(o);
+        }
+      };
+      obj.traverse(add_output);
+      return output;
+    };
+
+    E_Super.prototype.setFillColor = function(c) {
+      var err;
+      err = new Error("This method should be overriden in a subclass.");
+      console.log(err.stack);
+      debugger;
+      throw err;
+    };
+
+    E_Super.prototype.revertFillColor = function() {
+      var err;
+      err = new Error("This method should be overriden in a subclass.");
+      console.log(err.stack);
+      debugger;
+      throw err;
+    };
+
+    E_Super.prototype.setPosition = function(position) {
+      var z;
+      z = this._view.position.z;
+      this._view.position.copy(position.clone());
+      return this._view.position.z = z;
+    };
+
+    E_Super.prototype.setRotation = function(rotation_z) {
+      return this._view.rotation.z = rotation_z;
+    };
+
+    E_Super.prototype.setScale = function(scale) {
+      return this._view.scale.copy(scale.clone());
     };
 
     return E_Super;
@@ -46,7 +199,7 @@ TSAG = {};
  * 
  * Written by Bryce Summers on 12 - 19 - 2016.
  *
- * Purpose: This class specifies the gameplay andd aesthetic properties of building objects.
+ * Purpose: This class specifies the gameplay and aesthetic properties of building objects.
  */
 
 (function() {
@@ -68,6 +221,7 @@ TSAG = {};
       mesh.position.copy(position.clone());
       mesh.scale.copy(scale.clone());
       mesh.rotation.z = rotation_z;
+      this._mesh = mesh;
       view.add(mesh);
     }
 
@@ -84,7 +238,65 @@ TSAG = {};
       return node;
     };
 
+    E_Building.prototype.rotateBuilding = function(dr) {
+      this.getVisual().remove(this._mesh);
+      this._mesh.rotation.z = this._mesh.rotation.z + dr;
+      return this.getVisual().add(this._mesh);
+    };
+
     return E_Building;
+
+  })(TSAG.E_Super);
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+
+/*
+ *
+ * Car Element Class.
+ * 
+ * Written by Bryce Summers on 1 - 31 - 2017.
+ *
+ * Purpose: This class specifies the gameplay and aesthetic properties of building objects.
+ *
+ */
+
+(function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  TSAG.E_Car = (function(superClass) {
+    extend(E_Car, superClass);
+
+    function E_Car(scale) {
+      E_Car.__super__.constructor.call(this);
+      this.createVisual(scale);
+      this.distance = 0.0;
+      this.segment_index = 0;
+      this.next_car = null;
+    }
+
+    E_Car.prototype.createVisual = function(scale) {
+      var mesh, view;
+      view = this.getVisual();
+      mesh = this._newCar({
+        color: TSAG.style.c_car_fill
+      });
+      view.add(mesh);
+      view.position.z = TSAG.style.dz_cars;
+      return this.setScale(scale);
+    };
+
+    E_Car.prototype._newCar = function(params) {
+      var mesh_factory, square;
+      mesh_factory = TSAG.style.unit_meshes;
+      square = mesh_factory.newSquare(params);
+      square.scale.x = 2;
+      return square;
+    };
+
+    return E_Car;
 
   })(TSAG.E_Super);
 
@@ -98,31 +310,26 @@ TSAG = {};
   TSAG.E_Intersection = (function(superClass) {
     extend(E_Intersection, superClass);
 
-    function E_Intersection(s_vertex, position) {
+    function E_Intersection(position) {
       var fill, sx, sy, view;
       E_Intersection.__super__.constructor.call(this);
-      this._vertex = s_vertex;
       this._position = position;
       fill = TSAG.style.unit_meshes.newSquare({
         color: TSAG.style.c_road_fill
       });
-      fill.position.copy(this._position.clone());
+      fill.position.copy(new THREE.Vector3(position.x, position.y, 0));
       sx = sy = TSAG.style.road_offset_amount * 2;
       fill.scale.copy(new THREE.Vector3(sx, sy, 1));
       view = this.getVisual();
       view.add(fill);
       view.position.z = TSAG.style.dz_intersection;
+      this.generateBVH();
     }
 
     E_Intersection.prototype.addRoad = function(road) {
       var edge;
       edge = road.getEdge();
-      this._vertex.addEdge(edge);
       return true;
-    };
-
-    E_Intersection.prototype.getVertex = function() {
-      return this._vertex;
     };
 
     return E_Intersection;
@@ -139,65 +346,42 @@ TSAG = {};
   TSAG.E_Network = (function(superClass) {
     extend(E_Network, superClass);
 
-    function E_Network() {
+    function E_Network(graph) {
       E_Network.__super__.constructor.call(this);
-      this._bvh_needs_update = true;
-      this._bvh = null;
-      this._network_topology = new TSAG.S_Network_Topology();
-      this._intersections = [];
-      this._roads = [];
+      this.setTopology(graph);
+      this._network_processor = new SCRIB.PolylineGraphPostProcessor(graph);
+      this.roads = [];
     }
 
-    E_Network.prototype.newRoad = function(x, y) {
-      var edge, intersection, road, vertex, visual;
-      this._BVH = new TSAG.S_AABVH(this.getVisual(), {
-        val: 'x',
-        dim: 2
-      });
-      intersection = this.newIntersection(x, y);
-      vertex = intersection.getVertex();
-      edge = this._network_topology.newEdge();
-      edge.setStartVert(vertex);
-      road = new TSAG.E_Road(edge);
-      edge.setElement(road);
-      this._roads.push(road);
-      visual = this.getVisual();
-      visual.add(road.getVisual());
-      return road;
+    E_Network.prototype.getRoads = function() {
+      return this.roads;
     };
 
-    E_Network.prototype.newIntersection = function(x, y) {
-      var intersection, position, vertex, visual;
-      this._BVH = new TSAG.S_AABVH(this.getVisual(), {
-        val: 'x',
-        dim: 2
-      });
-      vertex = this._network_topology.newVertex();
-      position = new THREE.Vector3(x, y, 0);
-      intersection = new TSAG.E_Intersection(vertex, position);
-      vertex.setElement(intersection);
-      this._intersections.push(intersection);
-      visual = this.getVisual();
-      visual.add(intersection.getVisual());
-      return intersection;
+    E_Network.prototype.query_elements_pt = function(x, y) {
+      var elements, i, len, polyline, polylines;
+      polylines = this._bvh.query_point_all(new BDS.Point(x, y));
+      elements = [];
+      for (i = 0, len = polylines.length; i < len; i++) {
+        polyline = polylines[i];
+        elements.push(polyline.getAssociatedData());
+      }
+      return elements;
     };
 
-    E_Network.prototype.query_road = function(x, y) {
-      var element, model, triangle;
-      triangle = this._BVH.query_point(x, y);
-      if (triangle === null) {
-        return null;
+    E_Network.prototype.query_elements_box = function(box) {
+      var elements, i, len, polyline, polylines;
+      polylines = this._bvh.query_box_all(box);
+      elements = [];
+      for (i = 0, len = polylines.length; i < len; i++) {
+        polyline = polylines[i];
+        elements.push(polyline.getAssociatedData());
       }
-      triangle.mesh.material.color = new THREE.Color(Math.random(), Math.random(), Math.random());
-      model = triangle.model;
-      element = triangle.mesh.element;
-      if (element instanceof TSAG.E_Intersection) {
-        return null;
-      }
-      if (model instanceof TSAG.M_Road) {
-        return model;
-      }
-      return null;
+      return elements;
+    };
+
+    E_Network.prototype.newTopology_vertex = function() {
+      var graph;
+      graph = this.getTopology();
     };
 
     return E_Network;
@@ -214,14 +398,15 @@ TSAG = {};
   TSAG.E_Road = (function(superClass) {
     extend(E_Road, superClass);
 
-    function E_Road(edge) {
+    function E_Road() {
       var visual;
       E_Road.__super__.constructor.call(this);
-      this._edge = edge;
       this._main_curve = new TSAG.S_Curve();
       visual = this.getVisual();
       visual.position.z = TSAG.style.dz_road;
       this._road_visual = null;
+      this._center_polyline = null;
+      this.lanes = [];
     }
 
     E_Road.prototype.addPoint = function(pt) {
@@ -238,6 +423,11 @@ TSAG = {};
     };
 
     E_Road.prototype.updateDiscretization = function(max_length) {
+      this.updateVisual(max_length);
+      return this.generateBVH();
+    };
+
+    E_Road.prototype.updateVisual = function(max_length) {
       var fill_geometry, fill_material, fill_mesh, left_line, material, middle_line, middle_material, offset_amount, right_line, times_left, times_right, verts_left, verts_right, visual;
       offset_amount = TSAG.style.road_offset_amount;
       this._main_curve.updateDiscretization(max_length);
@@ -251,6 +441,7 @@ TSAG = {};
       middle_material.color = TSAG.style.c_road_midline;
       middle_line = new THREE.Geometry();
       middle_line.vertices = this._main_curve.getDiscretization();
+      this._center_polyline = this._THREE_vertex_list_to_BDS_Polyline(middle_line.vertices);
       times_left = [];
       times_right = [];
       verts_left = [];
@@ -264,12 +455,35 @@ TSAG = {};
       fill_geometry = this._get_fill_geometry(verts_left, verts_right, times_left, times_right);
       fill_material = TSAG.style.m_default_fill.clone();
       fill_material.color = TSAG.style.c_road_fill;
+      this.fill_material = fill_material;
       fill_mesh = new THREE.Mesh(fill_geometry, fill_material);
       fill_mesh.position.z = -.01;
       this._road_visual.add(fill_mesh);
       this._road_visual.add(new THREE.Line(middle_line, middle_material));
       this._road_visual.add(new THREE.Line(left_line, material));
-      return this._road_visual.add(new THREE.Line(right_line, material));
+      this._road_visual.add(new THREE.Line(right_line, material));
+      return this.updateLaneStructures(max_length, offset_amount, times_left, times_right);
+    };
+
+    E_Road.prototype.updateLaneStructures = function(max_length, offset_amount, times_left, times_right) {
+      var left_lane, left_lane_polyline, left_lane_vectors, right_lane, right_lane_polyline, right_lane_vectors;
+      left_lane_vectors = this._main_curve.getOffsets(max_length, offset_amount / 2, times_left);
+      right_lane_vectors = this._main_curve.getOffsets(max_length, -offset_amount / 2, times_right);
+      left_lane_polyline = this._main_curve.threeVectorsToBDSPolyline(left_lane_vectors);
+      right_lane_polyline = this._main_curve.threeVectorsToBDSPolyline(right_lane_vectors);
+      left_lane = new TSAG.S_Lane(left_lane_polyline, true);
+      right_lane = new TSAG.S_Lane(right_lane_polyline, false);
+      this.lanes = [];
+      this.lanes.push(left_lane);
+      return this.lanes.push(right_lane);
+    };
+
+    E_Road.prototype.setFillColor = function(c) {
+      return this.fill_material.color = c;
+    };
+
+    E_Road.prototype.revertFillColor = function() {
+      return this.fill_material.color = TSAG.style.c_road_fill;
     };
 
     E_Road.prototype._get_fill_geometry = function(left_verts, right_verts, times_left, times_right) {
@@ -307,6 +521,24 @@ TSAG = {};
       return output;
     };
 
+    E_Road.prototype.getCenterPolyline = function() {
+      return this._center_polyline;
+    };
+
+    E_Road.prototype._THREE_vertex_list_to_BDS_Polyline = function(vectors) {
+      var i, len, out, vec;
+      out = new BDS.Polyline();
+      for (i = 0, len = vectors.length; i < len; i++) {
+        vec = vectors[i];
+        out.addPoint(new BDS.Point(vec.x, vec.y));
+      }
+      return out;
+    };
+
+    E_Road.prototype.getLanes = function() {
+      return this.lanes;
+    };
+
     return E_Road;
 
   })(TSAG.E_Super);
@@ -332,7 +564,7 @@ TSAG = {};
     extend(E_Scene, superClass);
 
     function E_Scene(scene_width, scene_height) {
-      var building, h, i, j, pos, rz, scale, view, w, x, y;
+      var view;
       E_Scene.__super__.constructor.call(this, new THREE.Scene());
       view = this.getVisual();
       this._AABB = null;
@@ -341,9 +573,14 @@ TSAG = {};
       this._overlays = new THREE.Object3D();
       this._overlays.name = "Overlays";
       view.add(this._overlays);
-      this._buildings = new THREE.Object3D();
-      this._buildings.name = "Buildings";
-      view.add(this._buildings);
+    }
+
+    E_Scene.prototype.constructRandomBuildings = function() {
+      var building, h, i, j, pos, rz, scale, w, x, y;
+      this._building_visuals = new THREE.Object3D();
+      this._building_visuals.name = "Building Visuals";
+      view.add(this._building_visuals);
+      this._buildings = [];
       this._scale = 40;
       this._padding = 30;
       for (i = j = 0; j < 10; i = ++j) {
@@ -355,10 +592,10 @@ TSAG = {};
         pos = new THREE.Vector3(x, y, 0);
         scale = new THREE.Vector3(w, h, 1);
         building = new TSAG.E_Building(pos, scale, rz);
-        this._buildings.add(building.getVisual());
+        this._buildings.push(building);
+        this._building_visuals.add(building.getVisual());
       }
-      return;
-    }
+    };
 
     E_Scene.prototype.addOverlayVisual = function(obj) {
       return this._overlays.add(obj);
@@ -380,6 +617,14 @@ TSAG = {};
       return this._network;
     };
 
+    E_Scene.prototype.getBuildings = function() {
+      return this._buildings;
+    };
+
+    E_Scene.prototype.getRoads = function() {
+      return this._roads;
+    };
+
     E_Scene.prototype.queryPoint = function(x, y) {
       var direction, origin, ray, results;
       origin = new THREE.Vector3(x, y, -10);
@@ -396,29 +641,207 @@ TSAG = {};
 }).call(this);
 
 // Generated by CoffeeScript 1.11.1
+
+/*
+
+Lane Elements
+
+Written by Bryce Summers on 2 - 1 - 2017.
+
+Purpose: This class contains handles the movement of cars along a lane.
+
+queues cars through lane.
+Parameterizes car movement:
+ - t space [0:start, 1:end]      # Percentage space, needed for coorespondence with alternate lanes.
+ - s space [0:start, length:end] # Distance space,   needed for realistic movement of vehicles.
+ */
+
 (function() {
-  TSAG.I_All_Main = (function() {
+  TSAG.S_Lane = (function() {
+    function S_Lane(polyline, reverse) {
+      this.cars = new BDS.SingleLinkedList();
+      if (reverse) {
+        polyline.reverse();
+      }
+      this.cumulative_lengths = polyline.computeCumulativeLengths();
+      this.angles = polyline.computeTangentAngles();
+      this.tangents = polyline.computeUnitTangents();
+      this.points = polyline.toPoints();
+    }
+
+    S_Lane.prototype.addCar = function(car) {
+      return this.cars.enqueue(car);
+    };
+
+    S_Lane.prototype.moveCars = function() {
+      var car, destroyed_cars, iter;
+      destroyed_cars = [];
+      iter = this.cars.iterator();
+      while (iter.hasNext()) {
+        car = iter.next();
+        if (!this._moveCar(car, 1)) {
+          iter.remove();
+          destroyed_cars.push(car);
+        }
+      }
+      return destroyed_cars;
+    };
+
+    S_Lane.prototype._accelerateCar = function(car) {};
+
+    S_Lane.prototype._moveCar = function(car, change_in_distance) {
+      var car_position, index, local_distance, local_point, local_tangent, next_length;
+      index = car.segment_index;
+      car.distance += change_in_distance;
+      while (true) {
+        next_length = this.cumulative_lengths[index + 1];
+        if (!(car.distance >= next_length)) {
+          break;
+        }
+        index += 1;
+        if (index === this.cumulative_lengths.length) {
+          return false;
+        }
+      }
+      if (index >= this.points.length - 1) {
+        return false;
+      }
+      local_distance = car.distance - this.cumulative_lengths[index];
+      local_point = this.points[index];
+      local_tangent = this.tangents[index];
+      if (!local_tangent) {
+        debugger;
+      }
+      car_position = local_point.add(local_tangent.multScalar(local_distance));
+      car.setPosition(car_position);
+      car.segment_index = index;
+      car.setRotation(this.angles[index]);
+      return true;
+    };
+
+    return S_Lane;
+
+  })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+
+/*
+
+Top down Input Controller class.
+Specifies an aggregated controller.
+
+Written by Bryce Summers on 1 - 31 - 2017.
+
+FIXME: Allow people to toggle certain sub-controllers on and off.
+ */
+
+(function() {
+  TSAG.Input_Controller = (function() {
+    function Input_Controller() {
+      this._mouse_input_controllers = [];
+      this._keyboard_input_controllers = [];
+      this._time_input_controllers = [];
+      this._system_controllers = [];
+      this.time_on = false;
+    }
+
+    Input_Controller.prototype.add_universal_controller = function(controller) {
+      this._mouse_input_controllers.push(controller);
+      this._keyboard_input_controllers.push(controller);
+      this._time_input_controllers.push(controller);
+      this._system_controllers.push(controller);
+    };
+
+    Input_Controller.prototype.add_mouse_input_controller = function(controller) {
+      this._mouse_input_controllers.push(controller);
+    };
+
+    Input_Controller.prototype.add_keyboard_input_controller = function(controller) {
+      this._keyboard_input_controllers.push(controller);
+    };
+
+    Input_Controller.prototype.add_time_input_controller = function(controller) {
+      this._time_input_controllers.push(controller);
+    };
+
+    Input_Controller.prototype.add_system_controller = function(controller) {
+      this._system_controllers.push(controller);
+    };
+
+    Input_Controller.prototype.mouse_down = function(event) {
+      var controller, i, j, len, ref;
+      len = this._mouse_input_controllers.length;
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        controller = this._mouse_input_controllers[i];
+        controller.mouse_down(event);
+      }
+    };
+
+    Input_Controller.prototype.mouse_up = function(event) {
+      var controller, i, j, len, ref;
+      len = this._mouse_input_controllers.length;
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        controller = this._mouse_input_controllers[i];
+        controller.mouse_up(event);
+      }
+    };
+
+    Input_Controller.prototype.mouse_move = function(event) {
+      var controller, i, j, len, ref;
+      len = this._mouse_input_controllers.length;
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        controller = this._mouse_input_controllers[i];
+        controller.mouse_move(event);
+      }
+    };
+
+    Input_Controller.prototype.time = function(dt) {
+      var controller, i, j, len, ref;
+      len = this._time_input_controllers.length;
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        controller = this._time_input_controllers[i];
+        controller.time(dt);
+      }
+    };
+
+    Input_Controller.prototype.window_resize = function(event) {
+      var controller, i, j, len, ref;
+      len = this._system_controllers.length;
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        controller = this._system_controllers[i];
+        controller.window_resize();
+      }
+    };
+
+    return Input_Controller;
+
+  })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+(function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  TSAG.I_All_Main = (function(superClass) {
+    extend(I_All_Main, superClass);
+
     function I_All_Main(scene, camera) {
       this.scene = scene;
       this.camera = camera;
+      I_All_Main.__super__.constructor.call(this);
       this._mouse_input = new TSAG.I_Mouse_Main(this.scene, this.camera);
+      this.add_mouse_input_controller(this._mouse_input);
+      this._time_input = new TSAG.I_Time_Main(this.scene, this.camera);
+      this.add_time_input_controller(this._time_input);
     }
-
-    I_All_Main.prototype.mouse_down = function(event) {
-      return this._mouse_input.mouse_down(event);
-    };
-
-    I_All_Main.prototype.mouse_up = function(event) {
-      return this._mouse_input.mouse_up(event);
-    };
-
-    I_All_Main.prototype.mouse_move = function(event) {
-      return this._mouse_input.mouse_move(event);
-    };
 
     return I_All_Main;
 
-  })();
+  })(TSAG.Input_Controller);
 
 }).call(this);
 
@@ -436,13 +859,23 @@ TSAG = {};
       this._min_dist = TSAG.style.user_input_min_move;
       this.road = null;
       this.next_point = null;
+      this.network = this.e_scene.getNetwork();
+      this.intersections_perm = [];
+      this.intersections_temp = [];
     }
 
+    I_Mouse_Build_Road.prototype.isIdle = function() {
+      return this.state === "idle";
+    };
+
     I_Mouse_Build_Road.prototype.mouse_down = function(event) {
-      var dist, max_length, pos;
+      var dist, intersection, pos;
       if (this.state === "idle") {
-        this.network = this.e_scene.getNetwork();
-        this.road = this.network.newRoad(event.x, event.y);
+        this.road = new TSAG.E_Road();
+        this.network.addVisual(this.road.getVisual());
+        intersection = new TSAG.E_Intersection(new BDS.Point(event.x, event.y));
+        this.network.addVisual(intersection.getVisual());
+        this.intersections_perm.push(intersection);
         this.road.addPoint(new THREE.Vector3(event.x, event.y, 0));
         this.next_point = new THREE.Vector3(event.x, event.y + 1, 0);
         this.road.addPoint(this.next_point);
@@ -460,11 +893,7 @@ TSAG = {};
           this._mousePrevious.x = event.x;
           return this._mousePrevious.y = event.y;
         } else {
-          this.road.removeLastPoint();
-          this.state = "idle";
-          max_length = TSAG.style.discretization_length;
-          this.road.updateDiscretization(max_length);
-          return this.road = null;
+          return this.finish();
         }
       }
     };
@@ -472,20 +901,149 @@ TSAG = {};
     I_Mouse_Build_Road.prototype.mouse_up = function(event) {};
 
     I_Mouse_Build_Road.prototype.mouse_move = function(event) {
-      var max_length, road_model;
+      var max_length;
       if (this.state === "building") {
         this.next_point.x = event.x + .01;
         this.next_point.y = event.y + .01;
         max_length = TSAG.style.discretization_length;
         this.road.updateDiscretization(max_length);
-        road_model = this.network.query_road(event.x, event.y);
-        if (road_model !== null) {
-          return this.network.newIntersection(road_model.getPosition());
-        }
+        return this.updateTempIntersections();
       }
     };
 
+    I_Mouse_Build_Road.prototype.finish = function() {
+      var i, intersection, isect, len, max_length, ref;
+      if (this.state !== "building") {
+        return;
+      }
+      this.road.removeLastPoint();
+      this.state = "idle";
+      max_length = TSAG.style.discretization_length;
+      this.road.updateDiscretization(max_length);
+      intersection = new TSAG.E_Intersection(new BDS.Point(this._mousePrevious.x, this._mousePrevious.y));
+      this.network.addVisual(intersection.getVisual());
+      this.intersections_perm.push(intersection);
+      this.network.addCollisionPolygons(this.road.to_collision_polygons());
+      ref = this.intersections_perm;
+      for (i = 0, len = ref.length; i < len; i++) {
+        isect = ref[i];
+        this.network.addCollisionPolygon(isect.getCollisionPolygon());
+      }
+      this.network.roads.push(this.road);
+      this.road = null;
+      this.intersections_temp = [];
+      return this.intersections_perm = [];
+    };
+
+    I_Mouse_Build_Road.prototype.updateTempIntersections = function() {
+      this.destroyTempIntersections();
+      return this.createTempIntersections();
+    };
+
+    I_Mouse_Build_Road.prototype.createTempIntersections = function() {
+      var collision_polygon, e_polyline, elem, elements, i, isect, isect_pts, j, len, len1, polyline, pt, query_box;
+      polyline = this.road.getCenterPolyline();
+      collision_polygon = this.road.generateCollisionPolygon();
+      query_box = collision_polygon.generateBoundingBox();
+      elements = this.network.query_elements_box(query_box);
+      for (i = 0, len = elements.length; i < len; i++) {
+        elem = elements[i];
+        if (elem instanceof TSAG.E_Road) {
+          e_polyline = elem.getCenterPolyline();
+          isect_pts = polyline.report_intersections_with_polyline(e_polyline);
+          for (j = 0, len1 = isect_pts.length; j < len1; j++) {
+            pt = isect_pts[j];
+            isect = new TSAG.E_Intersection(pt);
+            this.intersections_temp.push(isect);
+            this.network.addVisual(isect.getVisual());
+            this.network.addCollisionPolygon(isect.getCollisionPolygon());
+          }
+        }
+      }
+
+      /*
+       * Add intersections every time the mouse cursor intersects an older road.
+      road_model = @network.query_road(event.x, event.y)
+      if road_model != null
+          @network.newIntersection(road_model.getPosition())
+       */
+    };
+
+    I_Mouse_Build_Road.prototype.destroyTempIntersections = function() {
+      var collision_polygon, i, isect, len, ref, results;
+      ref = this.intersections_temp;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        isect = ref[i];
+        this.network.removeVisual(isect.getVisual());
+        collision_polygon = isect.getCollisionPolygon();
+        results.push(this.network.removeCollisionPolygon(collision_polygon));
+      }
+      return results;
+    };
+
     return I_Mouse_Build_Road;
+
+  })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+(function() {
+  TSAG.I_Mouse_Highlight = (function() {
+    function I_Mouse_Highlight(e_scene, camera) {
+      this.e_scene = e_scene;
+      this.camera = camera;
+      this.network = this.e_scene.getNetwork();
+      this.previous_elements = [];
+    }
+
+    I_Mouse_Highlight.prototype.isIdle = function() {
+      return true;
+    };
+
+    I_Mouse_Highlight.prototype.finish = function() {
+      var prev_elem, results;
+      results = [];
+      while (this.previous_elements.length > 0) {
+        prev_elem = this.previous_elements.pop();
+        results.push(prev_elem.revertFillColor());
+      }
+      return results;
+    };
+
+    I_Mouse_Highlight.prototype.mouse_down = function(event) {
+      if (this.previous_elements.length > 0) {
+
+        /*
+        @network.removeVisual(@previous_element.getVisual())
+        @network.removeCollisionPolygon(@previous_element.getCollisionPolygon())
+        #@network.removeTopology
+         */
+      }
+    };
+
+    I_Mouse_Highlight.prototype.mouse_up = function(event) {};
+
+    I_Mouse_Highlight.prototype.mouse_move = function(event) {
+      var elem, elems, i, len, results, road;
+      this.finish();
+      elems = this.network.query_elements_pt(event.x, event.y);
+      results = [];
+      for (i = 0, len = elems.length; i < len; i++) {
+        elem = elems[i];
+        if (elem instanceof TSAG.E_Road) {
+          road = elem;
+          road.setFillColor(TSAG.style.highlight);
+          results.push(this.previous_elements.push(road));
+        } else {
+          results.push(void 0);
+        }
+      }
+      return results;
+    };
+
+    return I_Mouse_Highlight;
 
   })();
 
@@ -505,6 +1063,10 @@ TSAG = {};
 
     I_Mouse_Interface.prototype.mouse_move = function(event) {};
 
+    I_Mouse_Interface.prototype.isIdle = function() {};
+
+    I_Mouse_Interface.prototype.finish = function() {};
+
     return I_Mouse_Interface;
 
   })();
@@ -519,7 +1081,8 @@ TSAG = {};
       this.camera = camera;
       this.create_cursor();
       this.road_build_controller = new TSAG.I_Mouse_Build_Road(this.scene, this.camera);
-      this._current_mouse_input_controller = this.road_build_controller;
+      this.highlight_controller = new TSAG.I_Mouse_Highlight(this.scene, this.camera);
+      this._current_mouse_input_controller = this.highlight_controller;
       this.state = "idle";
       this._min_dist = 10;
     }
@@ -543,6 +1106,9 @@ TSAG = {};
     };
 
     I_Mouse_Main.prototype.mouse_down = function(event) {
+      if (this._current_mouse_input_controller !== this.road_build_controller && this._current_mouse_input_controller.isIdle()) {
+        this.switchController(this.road_build_controller);
+      }
       return this._current_mouse_input_controller.mouse_down(event);
     };
 
@@ -552,15 +1118,150 @@ TSAG = {};
 
     I_Mouse_Main.prototype.mouse_move = function(event) {
       var pos;
+      if (this._current_mouse_input_controller !== this.highlight_controller && this._current_mouse_input_controller.isIdle()) {
+        this.switchController(this.highlight_controller);
+      }
       pos = this.pointer.position;
       pos.x = event.x;
       pos.y = event.y;
       return this._current_mouse_input_controller.mouse_move(event);
     };
 
+    I_Mouse_Main.prototype.switchController = function(controller) {
+      this._current_mouse_input_controller.finish();
+      return this._current_mouse_input_controller = controller;
+    };
+
     return I_Mouse_Main;
 
   })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+
+/*
+
+Building Rotation Time Controller.
+
+Written by Bryce Summmers on 1 - 31 - 2017.
+
+ - A Test time controller that takes every building in the scene and rotates it by a steady rate.
+ */
+
+(function() {
+  TSAG.I_Time_Generate_Cars = (function() {
+    function I_Time_Generate_Cars(scene, camera) {
+      this.scene = scene;
+      this.camera = camera;
+      this.time_count = 0.0;
+      this.time_step = 1000.0;
+    }
+
+    I_Time_Generate_Cars.prototype.time = function(dt) {
+      var car, destroyed, i, j, k, lane, lanes, len, len1, len2, network, road, roads, x, y;
+      this.time_count += dt;
+      this.gen_cars = false;
+      if (this.time_count > this.time_step) {
+        this.time_count = (this.time_count % this.time_step) - this.time_step;
+        this.gen_cars = true;
+      }
+      network = this.scene.getNetwork();
+      roads = network.getRoads();
+      for (i = 0, len = roads.length; i < len; i++) {
+        road = roads[i];
+        lanes = road.getLanes();
+        for (j = 0, len1 = lanes.length; j < len1; j++) {
+          lane = lanes[j];
+          if (this.gen_cars) {
+            x = TSAG.style.road_offset_amount;
+            y = TSAG.style.road_offset_amount;
+            car = new TSAG.E_Car(new THREE.Vector3(x, y, 1));
+            this.scene.addVisual(car.getVisual());
+            lane.addCar(car);
+          }
+          destroyed = lane.moveCars();
+          for (k = 0, len2 = destroyed.length; k < len2; k++) {
+            car = destroyed[k];
+            this.scene.removeVisual(car.getVisual());
+          }
+        }
+      }
+    };
+
+    return I_Time_Generate_Cars;
+
+  })();
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+
+/*
+
+Time Input Controller.
+
+Written by Bryce Summmers on 1 - 31 - 2017.
+ */
+
+(function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  TSAG.I_Time_Main = (function(superClass) {
+    extend(I_Time_Main, superClass);
+
+    function I_Time_Main(scene, camera) {
+      this.scene = scene;
+      this.camera = camera;
+      I_Time_Main.__super__.constructor.call(this);
+      this.add_time_input_controller(new TSAG.I_Time_Generate_Cars(this.scene, this.camera));
+    }
+
+    return I_Time_Main;
+
+  })(TSAG.Input_Controller);
+
+}).call(this);
+
+// Generated by CoffeeScript 1.11.1
+
+/*
+
+Building Rotation Time Controller.
+
+Written by Bryce Summmers on 1 - 31 - 2017.
+
+ - A Test time controller that takes every building in the scene and rotates it by a steady rate.
+ */
+
+(function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  TSAG.I_Time_Rotate_Buildings = (function(superClass) {
+    extend(I_Time_Rotate_Buildings, superClass);
+
+    function I_Time_Rotate_Buildings(scene, camera) {
+      this.scene = scene;
+      this.camera = camera;
+      I_Time_Rotate_Buildings.__super__.constructor.call(this);
+    }
+
+    I_Time_Rotate_Buildings.prototype.time = function(dt) {
+      var buildings, element, i, len, results;
+      buildings = this.scene.getBuildings();
+      results = [];
+      for (i = 0, len = buildings.length; i < len; i++) {
+        element = buildings[i];
+        results.push(element.rotateBuilding(.01));
+      }
+      return results;
+    };
+
+    return I_Time_Rotate_Buildings;
+
+  })(TSAG.Input_Controller);
 
 }).call(this);
 
@@ -1064,6 +1765,16 @@ TSAG = {};
       return output;
     };
 
+    S_Curve.prototype.threeVectorsToBDSPolyline = function(vecs) {
+      var j, len, polyline, vec;
+      polyline = new BDS.Polyline(false);
+      for (j = 0, len = vecs.length; j < len; j++) {
+        vec = vecs[j];
+        polyline.addPoint(new BDS.Point(vec.x, vec.y));
+      }
+      return polyline;
+    };
+
     return S_Curve;
 
   })();
@@ -1188,6 +1899,7 @@ TSAG = {};
       }),
       c_building_fill: new THREE.Color(0xaaaaaa),
       c_building_outline: new THREE.Color(0x000000),
+      c_car_fill: new THREE.Color(0x00aaaa),
       c_road_fill: new THREE.Color(0x888888),
       c_road_midline: new THREE.Color(0x514802),
       c_road_outline: new THREE.Color(0x000000),
@@ -1198,7 +1910,9 @@ TSAG = {};
       cursor_circle_z: 1,
       cursor_circle_color: new THREE.Color(0xff0000),
       dz_intersection: 0.01,
-      dz_road: 0
+      dz_road: 0,
+      dz_cars: .02,
+      highlight: new THREE.Color(0x0000ff)
     };
     return TSAG.style.unit_meshes = new TSAG.Unit_Meshes();
   };
@@ -1489,6 +2203,48 @@ function init_input()
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mouseup",   onMouseUp);
+
+    // The current system time, used to correctly pass time deltas.
+    TIMESTAMP = performance.now();
+
+    // Initialize Time input.
+    beginTime();
+
+    TIME_ON = true;
+}
+
+function beginTime()
+{
+    TIMESTAMP = performance.now();
+    TIME_ON   = true;
+    timestep();
+}
+
+function timestep()
+{
+    if(TIME_ON)
+    {
+        requestAnimationFrame(timestep)
+    }
+    else
+    {
+        return;
+    }
+
+    time_new = performance.now()
+    var dt = time_new - TIMESTAMP
+    TIMESTAMP = time_new
+
+    try
+    {
+        input.time(dt)
+    }
+    catch(err)
+    { // Stop time on error.
+        TIME_ON = false
+        throw err
+    }
+
 }
 
 // Events.

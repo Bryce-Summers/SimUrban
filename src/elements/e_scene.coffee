@@ -26,14 +26,19 @@ class TSAG.E_Scene extends TSAG.E_Super
         @_overlays.name = "Overlays"
         view.add(@_overlays)
 
-        @_buildings = new THREE.Object3D()
-        @_buildings.name = "Buildings"
-        view.add(@_buildings)
+    constructRandomBuildings: () ->
+
+        # FIXME: Buildings should be factored into the network.
+        @_building_visuals = new THREE.Object3D()
+        @_building_visuals.name = "Building Visuals"
+        view.add(@_building_visuals)
+
+        @_buildings = []
         
         @_scale   = 40
         @_padding = 30
 
-        # Construct a bunch off buildings.
+        # Construct a bunch of buildings.
         for i in [0...10]
             x = @_padding + Math.random() * (scene_width  - @_padding * 2)
             y = @_padding + Math.random() * (scene_height - @_padding * 2)
@@ -47,7 +52,8 @@ class TSAG.E_Scene extends TSAG.E_Super
             scale = new THREE.Vector3(w, h, 1)
 
             building = new TSAG.E_Building(pos, scale, rz)
-            @_buildings.add(building.getVisual())
+            @_buildings.push(building)
+            @_building_visuals.add(building.getVisual())
 
         return
 
@@ -66,6 +72,13 @@ class TSAG.E_Scene extends TSAG.E_Super
 
     getNetwork: () ->
         return @_network
+
+    # Returns a list of all buildings.
+    getBuildings: () ->
+        return @_buildings
+
+    getRoads: () ->
+        return @_roads
 
     # Returns the mesh and the intersection point at the given cursor location or null if there is nothing there.
     # FIXME: Put this inside of the 2D THREE.js ATSAG.AABB code.

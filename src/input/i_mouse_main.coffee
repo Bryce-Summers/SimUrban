@@ -5,6 +5,7 @@
 #
 # This is the top level mouse input controller that receives all input related to mouse input.
 # It then pipes the input to the user's currently selected tool, such as a road building controller.
+# FIXME: Abstract all of this functionality into TSAG.Input_Controller.
 
 class TSAG.I_Mouse_Main
 
@@ -15,7 +16,8 @@ class TSAG.I_Mouse_Main
         @create_cursor()
 
         @road_build_controller = new TSAG.I_Mouse_Build_Road(@scene, @camera)
-        @_current_mouse_input_controller = @road_build_controller
+        @highlight_controller  = new TSAG.I_Mouse_Highlight(@scene, @camera)
+        @_current_mouse_input_controller = @highlight_controller
 
         @state = "idle"
         @_min_dist = 10
@@ -24,7 +26,7 @@ class TSAG.I_Mouse_Main
 
         # We create a red circular overlay to show us where the mouse currently is, especially for debugging purposes.
 
-        mesh_factory = new TSAG.Unit_Meshes()#TSAG.style.unit_meshes
+        mesh_factory = new TSAG.Unit_Meshes() #TSAG.style.unit_meshes
         params = {color: TSAG.style.cursor_circle_color}
 
         # THREE.js Mesh
@@ -45,6 +47,12 @@ class TSAG.I_Mouse_Main
 
     # Here are the input commands, they get piped to the current input controller.
     mouse_down: (event) ->
+
+        # Switch to Road build.
+        if @_current_mouse_input_controller != @road_build_controller and
+           @_current_mouse_input_controller.isIdle()
+                @switchController(@road_build_controller)
+
         @_current_mouse_input_controller.mouse_down(event)
 
     mouse_up:   (event) ->
@@ -52,9 +60,19 @@ class TSAG.I_Mouse_Main
 
     mouse_move: (event) ->
 
+        if @_current_mouse_input_controller != @highlight_controller and
+           @_current_mouse_input_controller.isIdle()
+                @switchController(@highlight_controller)
+
         # Update the red pointer overlay on screen.
         pos = @pointer.position;
         pos.x = event.x
         pos.y = event.y
 
         @_current_mouse_input_controller.mouse_move(event)
+
+    # Switches to a new input controller.
+    switchController: (controller) ->
+
+        @_current_mouse_input_controller.finish()
+        @_current_mouse_input_controller = controller
