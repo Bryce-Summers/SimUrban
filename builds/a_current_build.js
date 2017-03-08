@@ -1,5 +1,5 @@
 /*! Sim Urban, a project by Bryce Summers.
- *  Single File concatenated by Grunt Concatenate on 07-03-2017
+ *  Single File concatenated by Grunt Concatenate on 08-03-2017
  */
 /*
  * Defines the Traffic Simulation and Game namespace.
@@ -981,7 +981,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.finish = function() {
-      var end_element, end_pt, i, intersection, isect, isect_obj, isect_pt, len, max_length, ref, x, y;
+      var end_element, end_pt, i, intersection, isect, isect_obj, isect_pt, j, len, len1, max_length, ref, ref1, x, y;
       if (this.state !== "building") {
         return;
       }
@@ -1003,7 +1003,6 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         });
       } else if (end_element instanceof TSAG.E_Road) {
         intersection = new TSAG.E_Intersection(new BDS.Point(x, y));
-        this.network.addVisual(intersection.getVisual());
         this.isects.push({
           isect: intersection,
           type: 's',
@@ -1011,16 +1010,23 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         });
       } else {
         intersection = new TSAG.E_Intersection(new BDS.Point(x, y));
-        this.network.addVisual(intersection.getVisual());
         this.isects.push({
           isect: intersection,
           type: 'i'
         });
       }
-      this.network.addCollisionPolygons(this.road.to_collision_polygons());
+      this.network.removeVisual(this.road.getVisual());
       ref = this.isects;
       for (i = 0, len = ref.length; i < len; i++) {
         isect_obj = ref[i];
+        if (isect_obj.type !== 'p') {
+          this.network.removeVisual(isect_obj.isect.getVisual());
+        }
+      }
+      this.network.addCollisionPolygons(this.road.to_collision_polygons());
+      ref1 = this.isects;
+      for (j = 0, len1 = ref1.length; j < len1; j++) {
+        isect_obj = ref1[j];
         isect = isect_obj.isect;
         this.network.addCollisionPolygon(isect.getCollisionPolygon());
       }

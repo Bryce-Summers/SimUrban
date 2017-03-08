@@ -202,13 +202,34 @@ class TSAG.I_Mouse_Build_Road
         # 's' Split point intersection.
         else if end_element instanceof TSAG.E_Road
             intersection = new TSAG.E_Intersection(new BDS.Point(x, y))
-            @network.addVisual(intersection.getVisual())
+            #@network.addVisual(intersection.getVisual())
             @isects.push({isect:intersection, type:'s', road:end_element})
         # 'i' intermediate point, an intersection point in space.
         else
             intersection = new TSAG.E_Intersection(new BDS.Point(x, y))
-            @network.addVisual(intersection.getVisual())
+            #@network.addVisual(intersection.getVisual())
             @isects.push({isect:intersection, type:'i'})
+
+
+
+        # 1. Delete the Temporary Road visual.
+        @network.removeVisual(@road.getVisual())
+        #@road = null # We no longer need the road.
+
+        # 2. Delete the non-permanant Intersection visuals.
+        for isect_obj in @isects
+            if isect_obj.type != 'p'
+                @network.removeVisual(isect_obj.isect.getVisual())
+
+
+        # Associate every intersection (Except for the intermediate ones) with a SCRIB.Vertex.
+
+        # 2. Use the linker to link this graph.
+
+        # 3. Create Roads and associate intersections.
+        #    Associate every road with a path.
+        #    The roads need to have arc curve, instead of the temporary solution that we have right now.
+        #    This can come later.
 
 
         # Add the road's collision polygons to the network BVH.
