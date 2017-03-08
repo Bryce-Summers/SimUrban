@@ -29,3 +29,9 @@ Link Vertices.
 Unit test Bryce Data Structures.
 
 Standardize the mechanisms for destroying elements.
+
+
+Right now, I am working on letting the user draw scribble.js topologically linked polylines and making the cooresponding roads.
+- Draw polylines on the screen.
+- Maintain a graph with a SCRIBBLE.JS polyline graph post processor.
+- Convert 

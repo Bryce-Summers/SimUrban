@@ -21,12 +21,12 @@ class TSAG.E_Super
 
         # The bvh is a BDS.BVH2D object that stores geometry used for collision detection,
         # Which will allow users to query and interact with these elements.
-        @_bvh = new BDS.BVH2D();
+        @_bvh = new BDS.BVH2D()
 
         # The collision polygon used to represent this element in more macroscopic bvh's
         @_collision_polygon = null
 
-        # The topology is a SCRIB Halfedge Mesh element that stat represents this element's topological structure.
+        # The topology is a SCRIB Halfedge Mesh element that represents this element's topological structure.
         if not @_topology
             @_topology = null # This indicates that this is a temporary element, such as those being used in construction onscreen.
 

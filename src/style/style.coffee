@@ -41,7 +41,9 @@ TSAG.init_style = () ->
 
         dz_cars: .02,
 
-        highlight: new THREE.Color(0x0000ff)
+        highlight: new THREE.Color(0x0000ff),
+
+        error: new THREE.Color(0xff0000),
     }
 
     # Unit Geometries for rendering.

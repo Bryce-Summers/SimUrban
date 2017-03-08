@@ -27,6 +27,7 @@ class TSAG.E_Road extends TSAG.E_Super
 
     # Extends this road to include the given point.
     # returns false if the given point produces illegal road geometry.
+    # THREE.Vector3
     addPoint: (pt) ->
 
         @_main_curve.addPoint(pt)
@@ -34,8 +35,18 @@ class TSAG.E_Road extends TSAG.E_Super
         # FIXME: Check for illegal road geometry.
         return true
 
+    getLastPoint: () ->
+        return @_main_curve.getLastPoint()
+
     removeLastPoint: () ->
         return @_main_curve.removeLastPoint()
+
+    # THREE.Vector3
+    # Updates the location of the road's last point.
+    updateLastPoint: (pt) ->
+        @removeLastPoint()
+        @addPoint(pt)
+
 
     getPosition: (time) ->
         return @_main_curve.position(time)
@@ -189,3 +200,7 @@ class TSAG.E_Road extends TSAG.E_Super
 
     getLanes: () ->
         return @lanes
+
+    # Returns the total width of the road.
+    getWidth: () ->
+        TSAG.style.road_offset_amount*@lanes.length

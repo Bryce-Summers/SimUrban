@@ -36,3 +36,6 @@ class TSAG.E_Intersection extends TSAG.E_Super
 
         # FIXME: Returns false if the intersection is malformed. Set some limits on Intersection construction.
         return true
+
+    getPoint: () ->
+        return @_position.clone()
