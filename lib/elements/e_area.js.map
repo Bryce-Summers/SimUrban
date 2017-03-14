@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "e_area.js",
+  "sourceRoot": "..\\..",
+  "sources": [
+    "src\\elements\\e_area.coffee"
+  ],
+  "names": [],
+  "mappings": ";;AAAA;;;;;;;AAAA;;AAAA"
+}

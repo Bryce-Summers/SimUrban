@@ -32,7 +32,7 @@ class TSAG.E_Network extends TSAG.E_Super
         super()
 
         # We need a graph processor to make topology updates.
-        @_topology_generator = new TSAG.PolylineGraphGenerator()
+        @_topology_generator = new TSAG.TopologyGenerator()
         graph = @_topology_generator.allocateGraph()
         @_topology_linker    = new SCRIB.TopologyLinker(@_topology_generator, graph)
 
@@ -41,15 +41,38 @@ class TSAG.E_Network extends TSAG.E_Super
 
         # FIXME: We shouldn't need these, since they will be associated with topological elements.
         #@_intersections = []
-        @_roads = []
+        @_roads = new Set()
 
     # Add a road to the explict list of roads.
     # I may use this for enumerating streets by name or something like that...
     addRoad: (road) ->
-        @_roads.push(road)
+        @_roads.add(road)
+
+    removeRoad: (road) ->
+
+        @_roads.delete(road)
+        agents = []
+        road.getAgents(agents)
+
+
+        # FIXME: Destroy Apartment blocks if necessary.
+
+        # Unvisualize all cars and such.
+        # FIXME: Teleport cars back to their homes if possible.
+        for agent in agents
+            @removeVisual(agent.getVisual())
+
+        
 
     getRoads : () ->
-        return @_roads
+
+        #debugger
+        out = []
+
+        @_roads.forEach (road) =>
+            out.push(road)
+
+        return out
 
     getGenerator: () ->
         return @_topology_generator
@@ -77,6 +100,9 @@ class TSAG.E_Network extends TSAG.E_Super
 
         for polyline in polylines
             elements.push(polyline.getAssociatedData())
+
+        # FIXME: Maybe I should dig one level deeper into the elements.
+        # Or make a a local element query test.
 
         return elements
 

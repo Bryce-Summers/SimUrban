@@ -67,11 +67,12 @@ class TSAG.E_Super
     # Generates this Element's BVH from scratch with all collision data pointing to thie element.
     # This may be useful for leaf node's, but should be avoided for parent nodes.
     generateBVH: () ->
-        polylines = @to_collision_polygons()
+        polylines = @_to_collision_polygons()
         @_bvh = new BDS.BVH2D(polylines)
 
     generateCollisionPolygon: () ->
         @_collision_polygon = @_bvh.toBoundingBox().toPolyline()
+        @_collision_polygon.setAssociatedData(@)
         return @_collision_polygon
 
     getCollisionPolygon: () ->
@@ -91,7 +92,7 @@ class TSAG.E_Super
     # () -> BDS.Polyline()
     # Optional: appends lines to an input list.
     # Note: Polylines are interpreted to be polygons when closed.
-    to_collision_polygons: (output) ->
+    _to_collision_polygons: (output) ->
 
         obj           = @_view
         mesh_list     = @_to_mesh_list(obj)
@@ -161,6 +162,9 @@ class TSAG.E_Super
         debugger
         throw err
 
+
+    # FIXME
+
     setPosition: (position) ->
         z = @_view.position.z
         @_view.position.copy(position.clone())
@@ -169,6 +173,17 @@ class TSAG.E_Super
     setRotation: (rotation_z) ->
         @_view.rotation.z = rotation_z
 
+    getRotation: () ->
+        return @_view.rotation.z
+
     setScale: (scale) ->
 
         @_view.scale.copy(scale.clone())
+
+    getPosition: () ->
+        return @_view.position.clone()
+
+    # Returns a list of all agents.
+    # This might be used in road demolition to get a list of cars that need to be moved.
+    getAgents: (out) ->
+        throw new Error("Destroy is unimplemented for this element!!!")

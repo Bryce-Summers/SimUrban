@@ -35,3 +35,17 @@ Right now, I am working on letting the user draw scribble.js topologically linke
 - Draw polylines on the screen.
 - Maintain a graph with a SCRIBBLE.JS polyline graph post processor.
 - Convert 
+
+
+I would like to hide the THREE.js stuff inside of the element super class and provide an interface with BDS.Points.
+
+ - Implement traffic flow.
+ - Implement traffic lights.
+ - Lane markings near intersections.
+ - Intersection geometry.
+ - Detect degenerate geometry.
+
+Roads:
+ - Fix cutting topological bug.
+ - Have roads produce curves.
+ - 

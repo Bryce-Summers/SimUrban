@@ -15,15 +15,15 @@ Generates Halfedge Topology associated with Polyline Graph Data Objects.
 Written by Bryce Summers
 Move to its own file on 3 - 7 - 2017.
 ###
-class TSAG.PolylineGraphGenerator
+class TSAG.TopologyGenerator
 
     constructor: (@_graph) ->
 
         # New Element storages.
-        new_faces     = []
-        new_edges     = []
-        new_halfedges = []
-        new_vertices  = []
+        @new_faces     = []
+        @new_edges     = []
+        @new_halfedges = []
+        @new_vertices  = []
 
     # Allocates a new graph, stores it in this graph generator and returns it.
     allocateGraph: () ->
