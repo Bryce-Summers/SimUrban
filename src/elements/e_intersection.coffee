@@ -36,3 +36,31 @@ class TSAG.E_Intersection extends TSAG.E_Super
 
         # FIXME: Returns false if the intersection is malformed. Set some limits on Intersection construction.
         return true
+
+    getPoint: () ->
+        return @_position.clone()
+
+    # Road queries.
+    getIncomingHalfedgeFrom: (src_vert) ->
+        return @getOutgoingHalfedgeTo(src_vert).twin
+
+    getOutgoingHalfedgeTo: (dest_vert) ->
+        src_vert = @getTopology()
+
+        start = src_vert.halfedge
+        current = start
+        loop
+
+            # NOTE: Only full edges are associated with roads,
+            # because halfedges will be associated with driveways, building fronts, etc.
+            road = current.edge.data.element
+            if road.hasEndPoint(dest_vert)
+                return current
+
+            current = current.twin.next
+
+            break unless current != start
+
+        debugger
+        throw new Error("Halfedge not Found!")
+        return

@@ -15,10 +15,15 @@ class TSAG.E_Car extends TSAG.E_Super
         super()
         @createVisual(scale)
 
+        @resetLaneInfo()
+
+    # Sets this car's internal info to place it at the start of a new lane.
+    resetLaneInfo: () ->
         # Lane navigation variables.
         @distance = 0.0    # The Distance this car has travelled along this lane.
         @segment_index = 0 # The index of the segement that this car is on.
         @next_car = null
+
 
     createVisual: (scale) ->
 
@@ -32,7 +37,7 @@ class TSAG.E_Car extends TSAG.E_Super
 
         @setScale(scale)
 
-    # Construct a house object from a square and a triangle.
+    # Construct a car THREE.JS object.
     _newCar: (params) ->
 
         mesh_factory = TSAG.style.unit_meshes

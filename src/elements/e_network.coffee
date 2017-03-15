@@ -10,25 +10,75 @@
 # 
 # This class represents all the urban systems linkages, rather than extraneous User Interfaces and such.
 #
+# This class spatially represents the various elements in a number of bounding volume hiearchies:
+#
+# 1. @line_bvh: A line segment bvh for network edge lookup, such as linear segments of roads.
+#               This will be used to implement efficient road construction and road - road intersections.
+# 2. @bvh: A face bvh, that stores bounding volumes for elements, e.g. Roads, intersections, Areas.
+#    - FIXME: Every element should have its own internal BVH and they should only be represented by bounding boxes in this Network.
+#    - Every Road element has a BVH for faces...
+#    - Every Area has a BVH for elements contained within. This network is kind of like the root area.
+#
+#
+# Elements are composed of 3 distinct structures:
+# 1. @_view a THREE.JS Object tree, which controls what visuals are displayed to the user.
+# 2. @_bvh, which is used for collision detection.
+# 3. @_topology, which is used to represent the network connectivity between elements.
 class TSAG.E_Network extends TSAG.E_Super
 
     # Takes in a SCRIB.Graph.
-    constructor: (graph) ->
+    constructor: () ->
     
         super()
+
+        # We need a graph processor to make topology updates.
+        @_topology_generator = new TSAG.TopologyGenerator()
+        graph = @_topology_generator.allocateGraph()
+        @_topology_linker    = new SCRIB.TopologyLinker(@_topology_generator, graph)
 
         # Use the graph as this network's topology object.
         @setTopology(graph)
 
-        # We need a graph processor to make topology updates.
-        @_network_processor = new SCRIB.PolylineGraphPostProcessor(graph)
-
         # FIXME: We shouldn't need these, since they will be associated with topological elements.
         #@_intersections = []
-        @roads = []
+        @_roads = new Set()
+
+    # Add a road to the explict list of roads.
+    # I may use this for enumerating streets by name or something like that...
+    addRoad: (road) ->
+        @_roads.add(road)
+
+    removeRoad: (road) ->
+
+        @_roads.delete(road)
+        agents = []
+        road.getAgents(agents)
+
+
+        # FIXME: Destroy Apartment blocks if necessary.
+
+        # Unvisualize all cars and such.
+        # FIXME: Teleport cars back to their homes if possible.
+        for agent in agents
+            @removeVisual(agent.getVisual())
+
+        
 
     getRoads : () ->
-        return @roads
+
+        #debugger
+        out = []
+
+        @_roads.forEach (road) =>
+            out.push(road)
+
+        return out
+
+    getGenerator: () ->
+        return @_topology_generator
+
+    getLinker: () ->
+        return @_topology_linker 
 
     # The network exposes an interface for the following kinds of actions:
     # From aa_e_super interface.
@@ -51,6 +101,9 @@ class TSAG.E_Network extends TSAG.E_Super
         for polyline in polylines
             elements.push(polyline.getAssociatedData())
 
+        # FIXME: Maybe I should dig one level deeper into the elements.
+        # Or make a a local element query test.
+
         return elements
 
     # BDS.Box -> TSAG.Element[]
@@ -63,14 +116,3 @@ class TSAG.E_Network extends TSAG.E_Super
             elements.push(polyline.getAssociatedData())
 
         return elements
-
-
-    # -- Topology Creation, modification, and destruction functions.
-
-    newTopology_vertex: () ->
-
-        graph = @getTopology()
-
-
-
-        return 

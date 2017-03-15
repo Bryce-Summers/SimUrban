@@ -16,7 +16,8 @@ class TSAG.S_Lane
 
     # Input is a BDS.Polyline that represents the geometry of this lane.
     # ? Lane coorespondences.
-    constructor: (polyline, reverse) ->
+    # BDS.Polyline, bool, SCRIB.Vertex, SCRIB.Vertex
+    constructor: (polyline, reverse, @_start_vert, @_end_vert) ->
 
         @cars = new BDS.SingleLinkedList()
 
@@ -28,6 +29,12 @@ class TSAG.S_Lane
         @angles             = polyline.computeTangentAngles()
         @tangents           = polyline.computeUnitTangents()
         @points             = polyline.toPoints()
+
+    getStartVert: () ->
+        return @_start_vert
+
+    getEndVert: () ->
+        return @_end_vert
 
     # Adds a car to the beginning of this lane.
     addCar: (car) ->
@@ -88,13 +95,44 @@ class TSAG.S_Lane
 
         car_position = local_point.add(local_tangent.multScalar(local_distance))
 
+        # Funky Interpolation.
+        #car_position.x = old_position.x * .7 + car_position.x*.3
+        #car_position.y = old_position.y * .7 + car_position.y*.3
+
+        old_angle = car.getRotation()
+        new_angle = @angles[index]
+
+        if new_angle - old_angle > Math.PI
+            new_angle -= Math.PI*2
+
+        if old_angle - new_angle > Math.PI
+            new_angle += Math.PI*2
+
+        new_angle = old_angle * .7 + new_angle*.3
+
         # Update the car's position, rotation, and segment_index.
         car.setPosition(car_position)
         car.segment_index = index
-        car.setRotation(@angles[index])
+        car.setRotation(new_angle)
 
         return true
 
+    getAgents: (out) ->
 
+        iter = @cars.iterator()
 
+        while iter.hasNext()
+            car = iter.next()
+            out.push(car)
 
+        return
+
+    isEmpty: () ->
+        return @cars.isEmpty()
+
+    # Returns true iff the lane begins at a vertex of degree 1.
+    deadStart: () ->
+        return @_start_vert.degree() == 1
+
+    deadEnd: () ->
+        return @_end_vert.degree() == 1

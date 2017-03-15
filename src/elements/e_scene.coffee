@@ -15,8 +15,6 @@ class TSAG.E_Scene extends TSAG.E_Super
 
         view = @getVisual()
 
-        @_AABB = null
-
         # The network layer manages all of the transportation infrastructure elements, such as roads.
         @_network = new TSAG.E_Network()
         view.add(@_network.getVisual()) # FIXME: We will eventually want to rediscretize this guy depending on viewport.
@@ -79,16 +77,3 @@ class TSAG.E_Scene extends TSAG.E_Super
 
     getRoads: () ->
         return @_roads
-
-    # Returns the mesh and the intersection point at the given cursor location or null if there is nothing there.
-    # FIXME: Put this inside of the 2D THREE.js ATSAG.AABB code.
-    queryPoint: (x, y) ->
-
-        origin    = new THREE.Vector3(x, y, -10)
-        direction = new THREE.Vector3(0, 0,   1)
-        ray = new THREE.Ray(origin, direction)
-
-        results = @_AABB.collision_query(ray)
-
-        #[mesh, intersection_point]
-        return results

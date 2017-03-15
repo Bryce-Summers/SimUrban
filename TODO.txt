@@ -29,3 +29,26 @@ Link Vertices.
 Unit test Bryce Data Structures.
 
 Standardize the mechanisms for destroying elements.
+
+
+Right now, I am working on letting the user draw scribble.js topologically linked polylines and making the cooresponding roads.
+- Draw polylines on the screen.
+- Maintain a graph with a SCRIBBLE.JS polyline graph post processor.
+- Convert 
+
+
+I would like to hide the THREE.js stuff inside of the element super class and provide an interface with BDS.Points.
+
+ - Implement traffic flow.
+ - Implement traffic lights.
+ - Lane markings near intersections.
+ - Intersection geometry.
+ - Detect degenerate geometry.
+
+Roads:
+ - Fix cutting topological bug.
+ - Have roads produce arcs, instead of quadratic bezier curves.
+ - Have highlight be constrained to point in road face, rather than point in road bounding box.
+ - Fix endpoint behavior and building a road with a point inside of another road, rather than crossing it with a line.
+   The logic is there, but the functionality is not.
+ - Fix bugs from degenerate roads, such as those formed when by faulty mouse double clicks in the same place accidently.

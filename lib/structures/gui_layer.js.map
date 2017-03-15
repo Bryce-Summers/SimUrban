@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "gui_layer.js",
+  "sourceRoot": "..\\..",
+  "sources": [
+    "src\\structures\\gui_layer.coffee"
+  ],
+  "names": [],
+  "mappings": ";;AAAA;;;;;;;;AAAA;;AAAA"
+}

@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "Mesh_Unit_Circle.js",
+  "sourceRoot": "..\\..\\..",
+  "sources": [
+    "src\\meshes\\unit_geometries\\Mesh_Unit_Circle.coffee"
+  ],
+  "names": [],
+  "mappings": ";;AAAA;;;;;;;;;;;AAAA;AAAA,MAAA;;;EAWM,IAAI,CAAC;;;IAEM,0BAAA;AAGT,UAAA;MAAA,MAAA,GAAW;MACX,QAAA,GAAW;MACX,OAAA,GAAW;MACX,OAAA,GAAW,IAAI,CAAC,EAAL,GAAQ;MAEnB,QAAA,GAAe,IAAA,KAAK,CAAC,cAAN,CAAqB,EAArB,EAAyB,EAAzB,EAA6B,OAA7B,EAAsC,OAAtC;MAIf,OAAA,GAAc,IAAA,KAAK,CAAC,QAAN,CAAA;;AACd;;;;;;;;;MAUA,kDAAM,QAAN,EAAgB,OAAhB;IAvBS;;;;KAFmB,IAAI,CAAC;AAXzC"
+}

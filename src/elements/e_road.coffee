@@ -19,14 +19,68 @@ class TSAG.E_Road extends TSAG.E_Super
         visual = @getVisual()
         visual.position.z = TSAG.style.dz_road
 
+        @fill_material = TSAG.style.m_default_fill.clone()
+
         @_road_visual = null
         @_center_polyline = null
 
         @lanes = []
 
+        @vert_start = null
+        @vert_end   = null
+        @halfedge   = null
+
+        # Revert indices.
+        # {point1:, point2:, index}
+        @reverts = []
+
+
+    ####################################################################################################
+    #
+    # Topology.
+    #
+    ####################################################################################################
+
+    # Set the beginning vertex for this road.
+    setStartVertex: (vert) ->
+        @vert_start = vert
+
+    getStartVertex: () ->
+        return @vert_start
+
+    # Topologically speaking, roads consist of paths starting at an arbitrary vertex
+    # and continuing on through vertices of degree 2 until we get to the ending vertex.
+    # Roads represent paths between Extraordinary / degree != 2 verts.
+    # All of the edges in between will point to this road object in their .data objects.
+    # All of these topological elements may be easily found if we know of the halfedge along this road
+    # originating from the start vertex and headed in the direction of the ending vertex.
+    setHalfedge: (halfedge) ->
+        @halfedge = halfedge
+
+    # Returns null if the road's halfedge has not yet been defined.
+    getHalfedge: () ->
+        return @halfedge
+
+    # Set the ending vertex for this road.
+    setEndVertex: (vert) ->
+        @vert_end = vert
+
+    getEndVertex: () ->
+        return @vert_end
+
+    hasEndPoint: (vert) ->
+        return @vert_start == vert or @vert_end == vert
+
+
+    ####################################################################################################
+    #
+    # Geometry.
+    #
+    ####################################################################################################
 
     # Extends this road to include the given point.
     # returns false if the given point produces illegal road geometry.
+    # THREE.Vector3
     addPoint: (pt) ->
 
         @_main_curve.addPoint(pt)
@@ -34,8 +88,51 @@ class TSAG.E_Road extends TSAG.E_Super
         # FIXME: Check for illegal road geometry.
         return true
 
+    getLastPoint: () ->
+        return @_main_curve.getLastPoint()
+
+    getPenultimatePoint: () ->
+
+        len = @_main_curve.numPoints()
+        return @_main_curve.getPointAtIndex(len - 2)
+
+    numPoints: () ->
+        return @_main_curve.numPoints()
+
+    # 0 is end, 1 is penultimate, i is ith index of the reversed array of points.
+    getPointAtIndexFromEnd: (index) ->
+        len = @_main_curve.numPoints()
+        return @_main_curve.getPointAtIndex(len - 1 - index)
+
     removeLastPoint: () ->
         return @_main_curve.removeLastPoint()
+
+    # pushes the current state of the road onto the revert stack.
+    # Note: The user can legally remove the last point from this road.
+    setRevert: () ->
+        @reverts.push({index:@_main_curve.numPoints(), point2:@getLastPoint(), point1:@getPenultimatePoint()})
+
+    # reverts to the newest revert state.
+    revert: () ->
+
+        revert_obj = @revertObj()
+
+        while @_main_curve.numPoints() > revert_obj.index - 2
+            @removeLastPoint()
+
+        @addPoint(revert_obj.point1)
+        @addPoint(revert_obj.point2)
+        #@reverts.pop()
+
+    revertObj: () ->
+        return @reverts[@reverts.length - 1]
+
+    # THREE.Vector3
+    # Updates the location of the road's last point.
+    updateLastPoint: (pt) ->
+        @removeLastPoint()
+        @addPoint(pt)
+
 
     getPosition: (time) ->
         return @_main_curve.position(time)
@@ -109,14 +206,14 @@ class TSAG.E_Road extends TSAG.E_Super
         left_lane_polyline  = @_main_curve.threeVectorsToBDSPolyline(left_lane_vectors)
         right_lane_polyline = @_main_curve.threeVectorsToBDSPolyline(right_lane_vectors)
 
-        # FIXME: Flips these if we are in Brittain.
+        # FIXME: Flips these if we are in Britain.
         # Over here in the U.S. we drive on the right side of the road.
-        left_lane  = new TSAG.S_Lane(left_lane_polyline,  true)
-        right_lane = new TSAG.S_Lane(right_lane_polyline, false)
+        right_lane = new TSAG.S_Lane(right_lane_polyline, false, @vert_start, @vert_end)
+        left_lane  = new TSAG.S_Lane(left_lane_polyline,  true,  @vert_end, @vert_start)        
 
         @lanes = []
-        @lanes.push(left_lane)
         @lanes.push(right_lane)
+        @lanes.push(left_lane)
 
 
     # THREE.Color -> sets this material's fill color.
@@ -189,3 +286,20 @@ class TSAG.E_Road extends TSAG.E_Super
 
     getLanes: () ->
         return @lanes
+
+    getAgents: (out) ->
+        for lane in @lanes
+            lane.getAgents(out)
+
+    # Adds a car to this road,
+    # Starting at the given vertex and travelling towards the non given vertex.
+    # FIXME: I will need to abstract this out once we have multiple lanes.
+    addCar: (car, vert) ->
+        if vert == @vert_start
+            @lanes[0].addCar(car)
+        else
+            @lanes[1].addCar(car)
+
+    # Returns the total width of the road.
+    getWidth: () ->
+        TSAG.style.road_offset_amount*@lanes.length
