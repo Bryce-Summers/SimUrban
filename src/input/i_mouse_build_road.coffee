@@ -24,6 +24,9 @@ class TSAG.I_Mouse_Build_Road
         @_min_dist = TSAG.style.user_input_min_move
 
         # Points to the current road being constructed by the user using this input controller.
+        # The road only needs to dispaly the curved and straight portions.
+        # The road will not add points at intermediate intersection vertices,
+        # but those points will be captured in the more detailed @isects array.
         @road  = null
         @legal = false # Stores whether the current road is legal or not.
 
@@ -47,7 +50,7 @@ class TSAG.I_Mouse_Build_Road
         # point: will store the canonical location for this path object.
         @isects = []
 
-        # This stores the intersections contained within the region of road modifiable by mouse movement during construction.
+        # This stores the intersections contained within the last region of road, which is that modifiable by mouse movement during construction.
         @isects_last_segment = []
 
 
@@ -114,7 +117,7 @@ class TSAG.I_Mouse_Build_Road
                 pos.x = Math.floor(pos.x)
                 pos.y = Math.floor(pos.y)
 
-                # Cosntruct a new critical isect_obj point.
+                # Cosntruct a new isect_obj at the given mouse clicked position.
                 isect_obj = @classify_or_construct_intersection(event.x, event.y)
                 # The point may have shifted if there is a collision with an element at this location.
                 pos = isect_obj.point
@@ -128,16 +131,12 @@ class TSAG.I_Mouse_Build_Road
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
 
-                # Remove a no longer needed intermediate point.
-                ###
-                temp = @isects.pop()
-                if temp.type != 'i'
-                    @isects.push(temp)
-                ###
+                # Remove a control point form the permenant isects if present.
+                if @isects[@isects.length - 1].type == 'i'
+                    @isects.pop()
 
-
-                # Move all of the latest segment intersections over to main intersection array, 
-                # we will no longer have to worry about updating them.                
+                # Move all of the latest segment intersections over to main intersection array,
+                # we will no longer have to worry about updating them.
                 for isect in @isects_last_segment
                     @isects.push(isect)
 
@@ -145,7 +144,8 @@ class TSAG.I_Mouse_Build_Road
                 @isects_last_segment = []
                 @isects.push(isect_obj)
 
-                # Set a new revert state for temporary road construction.
+                # Every time the user moves their mouse and modifies the last segment, the road will revert
+                # back to this state before adding the extra intersection points.
                 # All intersections and curves in the next segment will revert to this state.
                 # FIXME: Handle the intermediate point that may be used as a curve pivot.
                 @road.setRevert()
@@ -182,7 +182,6 @@ class TSAG.I_Mouse_Build_Road
             out = {isect:start_element, type:'p', point:isect_pt}
         # 's' Split point intersection.
         else if element instanceof TSAG.E_Road
-            debugger
             intersection = new TSAG.E_Intersection(pt)
             @network.addVisual(intersection.getVisual())
             out = {isect:intersection, type:'s', road:start_element, point:pt}
@@ -218,10 +217,6 @@ class TSAG.I_Mouse_Build_Road
             # We use random numbers to ensure a lack of degeneracy.
             @next_point.x = event.x + .01
             @next_point.y = event.y + .01
-
-            # FIXME: Perhaps this should be dependant on the current view bounds...
-            max_length    = TSAG.style.discretization_length
-            @road.updateDiscretization(max_length)
 
             # Update the found intersections.
             @updateTemporaryRoad()
@@ -560,6 +555,10 @@ class TSAG.I_Mouse_Build_Road
         # Update the position of the last point in the road.
         @road.updateLastPoint(@next_point)
 
+        # FIXME: Perhaps this should be dependant on the current view bounds...
+        max_length    = TSAG.style.discretization_length
+        @road.updateDiscretization(max_length)
+
         # 2. Check legality of the current segment. Stop and color the road red if it is not legal.
         if not @checkLegality()
             @road.setFillColor(TSAG.style.error)
@@ -577,11 +576,13 @@ class TSAG.I_Mouse_Build_Road
         # 3. Check to see if endpoints
         @createTempIntersections()
 
+        @road.updateDiscretization(max_length)
+
 
     destroyLastSegmentIsects: () ->
 
-        # Revert the road.
-        #@road.revert()
+        # Revert the road to contain the control point and nothing more.
+        @road.revert()
 
         for isect_obj in @isects_last_segment
 
@@ -611,7 +612,6 @@ class TSAG.I_Mouse_Build_Road
         query_box = collision_polygon.generateBoundingBox()
         # FIXME.
 
-
     createTempIntersections: () ->
 
         # -- Step 1. Check for all intermediate intersections with the Graph embedding.
@@ -632,6 +632,7 @@ class TSAG.I_Mouse_Build_Road
             # If the element is a road, then we need to create an intersection at that location.
             if elem instanceof TSAG.E_Road
                 e_polyline = elem.getCenterPolyline()
+                # Adds intersections to @isect_last_segment
                 @_intersectPolygons(e_polyline, temp_polyline, elem)
 
 
@@ -657,28 +658,35 @@ class TSAG.I_Mouse_Build_Road
             p1 = last_point
             p2 = last_point.add(last_direction.multScalar(width))
             query_polyline = new BDS.Polyline(false, [p1, p2])
-
+            # Adds intersections to @isect_last_segment
             @_intersectPolygons(e_polyline, query_polyline, e_road)
 
-        # We can't modify the road until the intersections have been computed.
-        # Step 0. Add intermediate curve points.
-        if @road.numPoints() > 2
+        # After the intersections have been computed,
+        # we add an intermediate curve, where
+        # pt1 is the last non - control isect pt.
+        # pt2 is the intermediate point at the end of @isects, that is treated as a control point.
+        # pt3 is the first intersection computed along this contructed linear segment above in this function.
+        if @isects.length >= 2
 
-            return
+            len = @isects.length
+            pt1 = @isects[len - 2].point
+            pt2 = @isects[len - 1].point
+            if @isects_last_segment.length > 0
+                pt3 = @isects_last_segment[0].point
+            else
+                pt3 = last_point
 
-            pt1 = @road.getPointAtIndexFromEnd(2)
-            pt2 = @road.getPointAtIndexFromEnd(1)
-            pt3 = @road.getPointAtIndexFromEnd(0)
-
-            # Remove the intermediate point.
+            # Remove the current point and the intermediate point from the road.
+            # They will be replaced in @_createTempCurve.
             @road.removeLastPoint()
-            @road.removeLastPoint()
+            last_point = @road.removeLastPoint()
 
-            pt1 = @vec_to_pt(pt1)
-            pt2 = @vec_to_pt(pt2)
-            pt3 = @vec_to_pt(pt3)
-
+            # Adds intersections to @isect_last_segment.
+            # Adds the road points to visualize it to the user.
             @_createTempCurve(pt1, pt2, pt3)
+
+            # Add the current user point back, because it controls the linear expanse.
+            @road.addPoint(@next_point)
 
         return
 
@@ -693,10 +701,14 @@ class TSAG.I_Mouse_Build_Road
         # rather than an arc.
         # We will also need to modify the road.
 
+        prefix = []
+
         d1 = pt1.sub(pt0)
         d2 = pt2.sub(pt1)
 
-        for t in [1..10]
+        # Build road points without duplicating pt0 or pt2.
+        # pt1 will be discarded as a control point.
+        for t in [1...10]
             time = t/10.0
 
             # Order 1 Bezier Curves.
@@ -709,10 +721,13 @@ class TSAG.I_Mouse_Build_Road
 
             # Intermediate vertices are very simple to construct.
             isect_obj = {type:'i', point:pt}
-            @isects_last_segment.push(isect_obj)
+            prefix.push(isect_obj)
             @road.addPoint(@pt_to_vec(pt))
 
-        
+        # Add the curve points as a prefix to the last segment.
+        @isects_last_segment = prefix.concat(@isects_last_segment)
+
+        return
 
     vec_to_pt: (vec) ->
         x = vec.x

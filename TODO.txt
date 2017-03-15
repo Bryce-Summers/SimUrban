@@ -47,5 +47,7 @@ I would like to hide the THREE.js stuff inside of the element super class and pr
 
 Roads:
  - Fix cutting topological bug.
- - Have roads produce curves.
- - 
+ - Have roads produce arcs, instead of quadratic bezier curves.
+ - Have highlight be constrained to point in road face, rather than point in road bounding box.
+ - Fix endpoint behavior and building a road with a point inside of another road, rather than crossing it with a line.
+   The logic is there, but the functionality is not.

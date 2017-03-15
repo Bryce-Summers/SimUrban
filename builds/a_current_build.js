@@ -1150,12 +1150,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           this.road.addPoint(this.next_point);
           this._mousePrevious.x = event.x;
           this._mousePrevious.y = event.y;
-
-          /*
-          temp = @isects.pop()
-          if temp.type != 'i'
-              @isects.push(temp)
-           */
+          if (this.isects[this.isects.length - 1].type === 'i') {
+            this.isects.pop();
+          }
           ref = this.isects_last_segment;
           for (j = 0, len1 = ref.length; j < len1; j++) {
             isect = ref[j];
@@ -1183,7 +1180,6 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           point: isect_pt
         };
       } else if (element instanceof TSAG.E_Road) {
-        debugger;
         intersection = new TSAG.E_Intersection(pt);
         this.network.addVisual(intersection.getVisual());
         out = {
@@ -1215,12 +1211,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     I_Mouse_Build_Road.prototype.mouse_up = function(event) {};
 
     I_Mouse_Build_Road.prototype.mouse_move = function(event) {
-      var max_length;
       if (this.state === "building") {
         this.next_point.x = event.x + .01;
         this.next_point.y = event.y + .01;
-        max_length = TSAG.style.discretization_length;
-        this.road.updateDiscretization(max_length);
         return this.updateTemporaryRoad();
       }
     };
@@ -1441,8 +1434,11 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.updateTemporaryRoad = function() {
+      var max_length;
       this.destroyLastSegmentIsects();
       this.road.updateLastPoint(this.next_point);
+      max_length = TSAG.style.discretization_length;
+      this.road.updateDiscretization(max_length);
       if (!this.checkLegality()) {
         this.road.setFillColor(TSAG.style.error);
         this.legal = false;
@@ -1450,11 +1446,13 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
       }
       this.road.revertFillColor();
       this.legal = true;
-      return this.createTempIntersections();
+      this.createTempIntersections();
+      return this.road.updateDiscretization(max_length);
     };
 
     I_Mouse_Build_Road.prototype.destroyLastSegmentIsects = function() {
       var collision_polygon, isect, isect_obj, j, len1, ref;
+      this.road.revert();
       ref = this.isects_last_segment;
       for (j = 0, len1 = ref.length; j < len1; j++) {
         isect_obj = ref[j];
@@ -1476,7 +1474,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.createTempIntersections = function() {
-      var e_polyline, e_road, elem, elements, j, last_direction, last_point, len1, p1, p2, polyline, pt1, pt2, pt3, query_box, query_polyline, temp_polyline, width;
+      var e_polyline, e_road, elem, elements, j, last_direction, last_point, len, len1, p1, p2, polyline, pt1, pt2, pt3, query_box, query_polyline, temp_polyline, width;
       polyline = this.road.getCenterPolyline();
       temp_polyline = polyline.getLastSegment();
       query_box = temp_polyline.generateBoundingBox();
@@ -1499,26 +1497,28 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         query_polyline = new BDS.Polyline(false, [p1, p2]);
         this._intersectPolygons(e_polyline, query_polyline, e_road);
       }
-      if (this.road.numPoints() > 2) {
-        return;
-        pt1 = this.road.getPointAtIndexFromEnd(2);
-        pt2 = this.road.getPointAtIndexFromEnd(1);
-        pt3 = this.road.getPointAtIndexFromEnd(0);
+      if (this.isects.length >= 2) {
+        len = this.isects.length;
+        pt1 = this.isects[len - 2].point;
+        pt2 = this.isects[len - 1].point;
+        if (this.isects_last_segment.length > 0) {
+          pt3 = this.isects_last_segment[0].point;
+        } else {
+          pt3 = last_point;
+        }
         this.road.removeLastPoint();
-        this.road.removeLastPoint();
-        pt1 = this.vec_to_pt(pt1);
-        pt2 = this.vec_to_pt(pt2);
-        pt3 = this.vec_to_pt(pt3);
+        last_point = this.road.removeLastPoint();
         this._createTempCurve(pt1, pt2, pt3);
+        this.road.addPoint(this.next_point);
       }
     };
 
     I_Mouse_Build_Road.prototype._createTempCurve = function(pt0, pt1, pt2) {
-      var b1, b2, d1, d2, d3, isect_obj, j, pt, results, t, time;
+      var b1, b2, d1, d2, d3, isect_obj, j, prefix, pt, t, time;
+      prefix = [];
       d1 = pt1.sub(pt0);
       d2 = pt2.sub(pt1);
-      results = [];
-      for (t = j = 1; j <= 10; t = ++j) {
+      for (t = j = 1; j < 10; t = ++j) {
         time = t / 10.0;
         b1 = pt0.add(d1.multScalar(time));
         b2 = pt1.add(d2.multScalar(time));
@@ -1528,10 +1528,10 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           type: 'i',
           point: pt
         };
-        this.isects_last_segment.push(isect_obj);
-        results.push(this.road.addPoint(this.pt_to_vec(pt)));
+        prefix.push(isect_obj);
+        this.road.addPoint(this.pt_to_vec(pt));
       }
-      return results;
+      this.isects_last_segment = prefix.concat(this.isects_last_segment);
     };
 
     I_Mouse_Build_Road.prototype.vec_to_pt = function(vec) {
