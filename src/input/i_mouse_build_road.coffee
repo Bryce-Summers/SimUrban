@@ -128,11 +128,12 @@ class TSAG.I_Mouse_Build_Road
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
 
-
                 # Remove a no longer needed intermediate point.
+                ###
                 temp = @isects.pop()
                 if temp.type != 'i'
                     @isects.push(temp)
+                ###
 
 
                 # Move all of the latest segment intersections over to main intersection array, 
@@ -580,7 +581,7 @@ class TSAG.I_Mouse_Build_Road
     destroyLastSegmentIsects: () ->
 
         # Revert the road.
-        @road.revert()
+        #@road.revert()
 
         for isect_obj in @isects_last_segment
 

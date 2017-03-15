@@ -1115,7 +1115,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.mouse_down = function(event) {
-      var dist, isect, isect_obj, j, len1, max_length, pos, pt, ref, temp, x, y;
+      var dist, isect, isect_obj, j, len1, max_length, pos, pt, ref, x, y;
       if (this.state === "idle") {
         this.road = new TSAG.E_Road();
         this.network.addVisual(this.road.getVisual());
@@ -1150,10 +1150,12 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           this.road.addPoint(this.next_point);
           this._mousePrevious.x = event.x;
           this._mousePrevious.y = event.y;
-          temp = this.isects.pop();
-          if (temp.type !== 'i') {
-            this.isects.push(temp);
-          }
+
+          /*
+          temp = @isects.pop()
+          if temp.type != 'i'
+              @isects.push(temp)
+           */
           ref = this.isects_last_segment;
           for (j = 0, len1 = ref.length; j < len1; j++) {
             isect = ref[j];
@@ -1453,7 +1455,6 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
 
     I_Mouse_Build_Road.prototype.destroyLastSegmentIsects = function() {
       var collision_polygon, isect, isect_obj, j, len1, ref;
-      this.road.revert();
       ref = this.isects_last_segment;
       for (j = 0, len1 = ref.length; j < len1; j++) {
         isect_obj = ref[j];
