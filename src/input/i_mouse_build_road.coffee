@@ -125,9 +125,15 @@ class TSAG.I_Mouse_Build_Road
                 @next_point = new THREE.Vector3( event.x + .01, event.y + .01, 0)
                 @road.addPoint(@next_point)
 
-
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
+
+
+                # Remove a no longer needed intermediate point.
+                temp = @isects.pop()
+                if temp.type != 'i'
+                    @isects.push(temp)
+
 
                 # Move all of the latest segment intersections over to main intersection array, 
                 # we will no longer have to worry about updating them.                
@@ -211,16 +217,13 @@ class TSAG.I_Mouse_Build_Road
             # We use random numbers to ensure a lack of degeneracy.
             @next_point.x = event.x + .01
             @next_point.y = event.y + .01
-            # Set the last point on the renderable road to be the user indicated next point.
-            @road.updateLastPoint(@next_point)
-
-            # Update the found intersections.
-            @updateTemporaryRoad()
 
             # FIXME: Perhaps this should be dependant on the current view bounds...
             max_length    = TSAG.style.discretization_length
             @road.updateDiscretization(max_length)
 
+            # Update the found intersections.
+            @updateTemporaryRoad()
             
 
     # This may be called from anyone who knows about this controller.
@@ -552,6 +555,10 @@ class TSAG.I_Mouse_Build_Road
         # 1. Destroy the non-permanant intersections from the last segment.
         @destroyLastSegmentIsects()
 
+        # Set the last point on the renderable road to be the user indicated next point.
+        # Update the position of the last point in the road.
+        @road.updateLastPoint(@next_point)
+
         # 2. Check legality of the current segment. Stop and color the road red if it is not legal.
         if not @checkLegality()
             @road.setFillColor(TSAG.style.error)
@@ -606,23 +613,6 @@ class TSAG.I_Mouse_Build_Road
 
     createTempIntersections: () ->
 
-        # Step 0. Add intermediate curve points.
-        if @isects.length > 2
-                
-            pt1 = @road.getPointAtIndexFromEnd(2)
-            pt2 = @road.getPointAtIndexFromEnd(1)
-            pt3 = @road.getPointAtIndexFromEnd(0)
-
-            # Remove the intermediate point.
-            @road.removeLastPoint()
-            @road.removeLastPoint()
-
-            pt1 = @vec_to_pt(pt1)
-            pt2 = @vec_to_pt(pt2)
-            pt3 = @vec_to_pt(pt3)
-
-            @_createTempCurve(pt1, pt2, pt3)
-
         # -- Step 1. Check for all intermediate intersections with the Graph embedding.
 
         # The polyline representing the center of the temporary road.
@@ -669,6 +659,26 @@ class TSAG.I_Mouse_Build_Road
 
             @_intersectPolygons(e_polyline, query_polyline, e_road)
 
+        # We can't modify the road until the intersections have been computed.
+        # Step 0. Add intermediate curve points.
+        if @road.numPoints() > 2
+
+            return
+
+            pt1 = @road.getPointAtIndexFromEnd(2)
+            pt2 = @road.getPointAtIndexFromEnd(1)
+            pt3 = @road.getPointAtIndexFromEnd(0)
+
+            # Remove the intermediate point.
+            @road.removeLastPoint()
+            @road.removeLastPoint()
+
+            pt1 = @vec_to_pt(pt1)
+            pt2 = @vec_to_pt(pt2)
+            pt3 = @vec_to_pt(pt3)
+
+            @_createTempCurve(pt1, pt2, pt3)
+
         return
 
     # Create temporary intersection objects.
@@ -685,9 +695,16 @@ class TSAG.I_Mouse_Build_Road
         d1 = pt1.sub(pt0)
         d2 = pt2.sub(pt1)
 
-        for t in [0...10]
-            time = t/10
-            pt = pt0.add(d1.multScalar(time)).add(d2.multScalar(time))
+        for t in [1..10]
+            time = t/10.0
+
+            # Order 1 Bezier Curves.
+            b1 = pt0.add(d1.multScalar(time))
+            b2 = pt1.add(d2.multScalar(time))
+
+            # Quadratic Bezier Curve interpolates between positions on the first bezier curves.
+            d3 = b2.sub(b1)
+            pt = b1.add(d3.multScalar(time))
 
             # Intermediate vertices are very simple to construct.
             isect_obj = {type:'i', point:pt}

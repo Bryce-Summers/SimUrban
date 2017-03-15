@@ -1,5 +1,5 @@
 /*! Sim Urban, a project by Bryce Summers.
- *  Single File concatenated by Grunt Concatenate on 13-03-2017
+ *  Single File concatenated by Grunt Concatenate on 15-03-2017
  */
 /*
  * Defines the Traffic Simulation and Game namespace.
@@ -557,6 +557,10 @@ Game elements that are topologically associated with faces.
       return this._main_curve.getPointAtIndex(len - 2);
     };
 
+    E_Road.prototype.numPoints = function() {
+      return this._main_curve.numPoints();
+    };
+
     E_Road.prototype.getPointAtIndexFromEnd = function(index) {
       var len;
       len = this._main_curve.numPoints();
@@ -1111,7 +1115,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.mouse_down = function(event) {
-      var dist, isect, isect_obj, j, len1, max_length, pos, pt, ref, x, y;
+      var dist, isect, isect_obj, j, len1, max_length, pos, pt, ref, temp, x, y;
       if (this.state === "idle") {
         this.road = new TSAG.E_Road();
         this.network.addVisual(this.road.getVisual());
@@ -1146,6 +1150,10 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           this.road.addPoint(this.next_point);
           this._mousePrevious.x = event.x;
           this._mousePrevious.y = event.y;
+          temp = this.isects.pop();
+          if (temp.type !== 'i') {
+            this.isects.push(temp);
+          }
           ref = this.isects_last_segment;
           for (j = 0, len1 = ref.length; j < len1; j++) {
             isect = ref[j];
@@ -1209,10 +1217,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
       if (this.state === "building") {
         this.next_point.x = event.x + .01;
         this.next_point.y = event.y + .01;
-        this.road.updateLastPoint(this.next_point);
-        this.updateTemporaryRoad();
         max_length = TSAG.style.discretization_length;
-        return this.road.updateDiscretization(max_length);
+        this.road.updateDiscretization(max_length);
+        return this.updateTemporaryRoad();
       }
     };
 
@@ -1433,6 +1440,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
 
     I_Mouse_Build_Road.prototype.updateTemporaryRoad = function() {
       this.destroyLastSegmentIsects();
+      this.road.updateLastPoint(this.next_point);
       if (!this.checkLegality()) {
         this.road.setFillColor(TSAG.style.error);
         this.legal = false;
@@ -1468,17 +1476,6 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
 
     I_Mouse_Build_Road.prototype.createTempIntersections = function() {
       var e_polyline, e_road, elem, elements, j, last_direction, last_point, len1, p1, p2, polyline, pt1, pt2, pt3, query_box, query_polyline, temp_polyline, width;
-      if (this.isects.length > 2) {
-        pt1 = this.road.getPointAtIndexFromEnd(2);
-        pt2 = this.road.getPointAtIndexFromEnd(1);
-        pt3 = this.road.getPointAtIndexFromEnd(0);
-        this.road.removeLastPoint();
-        this.road.removeLastPoint();
-        pt1 = this.vec_to_pt(pt1);
-        pt2 = this.vec_to_pt(pt2);
-        pt3 = this.vec_to_pt(pt3);
-        this._createTempCurve(pt1, pt2, pt3);
-      }
       polyline = this.road.getCenterPolyline();
       temp_polyline = polyline.getLastSegment();
       query_box = temp_polyline.generateBoundingBox();
@@ -1501,16 +1498,31 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         query_polyline = new BDS.Polyline(false, [p1, p2]);
         this._intersectPolygons(e_polyline, query_polyline, e_road);
       }
+      if (this.road.numPoints() > 2) {
+        return;
+        pt1 = this.road.getPointAtIndexFromEnd(2);
+        pt2 = this.road.getPointAtIndexFromEnd(1);
+        pt3 = this.road.getPointAtIndexFromEnd(0);
+        this.road.removeLastPoint();
+        this.road.removeLastPoint();
+        pt1 = this.vec_to_pt(pt1);
+        pt2 = this.vec_to_pt(pt2);
+        pt3 = this.vec_to_pt(pt3);
+        this._createTempCurve(pt1, pt2, pt3);
+      }
     };
 
     I_Mouse_Build_Road.prototype._createTempCurve = function(pt0, pt1, pt2) {
-      var d1, d2, isect_obj, j, pt, results, t, time;
+      var b1, b2, d1, d2, d3, isect_obj, j, pt, results, t, time;
       d1 = pt1.sub(pt0);
       d2 = pt2.sub(pt1);
       results = [];
-      for (t = j = 0; j < 10; t = ++j) {
-        time = t / 10;
-        pt = pt0.add(d1.multScalar(time)).add(d2.multScalar(time));
+      for (t = j = 1; j <= 10; t = ++j) {
+        time = t / 10.0;
+        b1 = pt0.add(d1.multScalar(time));
+        b2 = pt1.add(d2.multScalar(time));
+        d3 = b2.sub(b1);
+        pt = b1.add(d3.multScalar(time));
         isect_obj = {
           type: 'i',
           point: pt

@@ -96,6 +96,9 @@ class TSAG.E_Road extends TSAG.E_Super
         len = @_main_curve.numPoints()
         return @_main_curve.getPointAtIndex(len - 2)
 
+    numPoints: () ->
+        return @_main_curve.numPoints()
+
     # 0 is end, 1 is penultimate, i is ith index of the reversed array of points.
     getPointAtIndexFromEnd: (index) ->
         len = @_main_curve.numPoints()
