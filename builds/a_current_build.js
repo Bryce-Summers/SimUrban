@@ -1514,8 +1514,73 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype._createTempCurve = function(pt0, pt1, pt2) {
-      var b1, b2, d1, d2, d3, isect_obj, j, prefix, pt, t, time;
-      prefix = [];
+      var prefix;
+      prefix = this._arc(pt0, pt1, pt2, TSAG.style.radius_speed1);
+      this.isects_last_segment = prefix.concat(this.isects_last_segment);
+    };
+
+    I_Mouse_Build_Road.prototype._arc = function(pt0, pt1, pt2, radius) {
+      var angle, angle1, angle2, angle_diff, arc_center_pt, arc_length, curve_pts, dir01, dir21, i, isect_obj, isects, j, k, len, len1, offset_pt0, offset_pt2, offset_ray01, offset_ray21, orientation, perp_dir_pt0, perp_dir_pt2, pt, ray01, ray21, ref, seg_length, temp;
+      dir01 = pt1.sub(pt0);
+      dir21 = pt1.sub(pt2);
+      ray01 = new BDS.Ray(pt0, dir01);
+      ray21 = new BDS.Ray(pt2, dir21);
+      orientation = ray01.line_side_test(pt2);
+      orientation = BDS.Math.sign(orientation);
+      if (orientation === 0) {
+        return [];
+      }
+      perp_dir_pt0 = ray01.getRightPerpendicularDirection().multScalar(orientation);
+      perp_dir_pt0 = perp_dir_pt0.normalize();
+      offset_pt0 = pt0.add(perp_dir_pt0.multScalar(radius));
+      perp_dir_pt2 = ray21.getLeftPerpendicularDirection().multScalar(orientation);
+      perp_dir_pt2 = perp_dir_pt2.normalize();
+      offset_pt2 = pt2.add(perp_dir_pt2.multScalar(radius));
+      offset_ray01 = new BDS.Ray(offset_pt0, dir01);
+      offset_ray21 = new BDS.Ray(offset_pt2, dir21);
+      arc_center_pt = offset_ray01.intersect_ray(offset_ray21);
+      if (arc_center_pt === null) {
+        return [];
+      }
+      angle1 = perp_dir_pt0.multScalar(-1).angle();
+      angle2 = perp_dir_pt2.multScalar(-1).angle();
+      seg_length = TSAG.style.discretization_length;
+      curve_pts = [];
+      if (orientation < 0) {
+        temp = angle1;
+        angle1 = angle2;
+        angle2 = temp;
+      }
+      if (angle2 < angle1) {
+        angle2 += Math.PI * 2;
+      }
+      angle_diff = angle2 - angle1;
+      arc_length = radius * angle_diff;
+      len = Math.ceil(arc_length / seg_length);
+      for (i = j = 0, ref = len; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        angle = angle1 + i * (angle2 - angle1) / len;
+        pt = BDS.Point.directionFromAngle(angle);
+        curve_pts.push(arc_center_pt.add(pt.multScalar(radius)));
+      }
+      if (orientation < 0) {
+        curve_pts = curve_pts.reverse();
+      }
+      isects = [];
+      for (k = 0, len1 = curve_pts.length; k < len1; k++) {
+        pt = curve_pts[k];
+        isect_obj = {
+          type: 'i',
+          point: pt
+        };
+        isects.push(isect_obj);
+        this.road.addPoint(this.pt_to_vec(pt));
+      }
+      return isects;
+    };
+
+    I_Mouse_Build_Road.prototype._quadraticBezier = function(pt0, pt1, pt2) {
+      var b1, b2, d1, d2, d3, isect_obj, isects, j, pt, t, time;
+      isects = [];
       d1 = pt1.sub(pt0);
       d2 = pt2.sub(pt1);
       for (t = j = 1; j < 10; t = ++j) {
@@ -1528,10 +1593,10 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           type: 'i',
           point: pt
         };
-        prefix.push(isect_obj);
+        isects.push(isect_obj);
         this.road.addPoint(this.pt_to_vec(pt));
       }
-      this.isects_last_segment = prefix.concat(this.isects_last_segment);
+      return isects;
     };
 
     I_Mouse_Build_Road.prototype.vec_to_pt = function(vec) {
@@ -2777,6 +2842,7 @@ Written by Bryce Summmers on 1 - 31 - 2017.
 (function() {
   TSAG.init_style = function() {
     TSAG.style = {
+      radius_speed1: 50,
       discretization_length: 10,
       road_offset_amount: 10,
       user_input_min_move: 10,

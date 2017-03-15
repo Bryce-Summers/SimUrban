@@ -53,3 +53,5 @@ Roads:
    The logic is there, but the functionality is not.
  - Fix bugs from degenerate roads, such as those formed when by faulty mouse double clicks in the same place accidently.
  - Detect Road self intersections.
+ - Color code the road creation to enhance the user experience.
+ - Do legality checking.

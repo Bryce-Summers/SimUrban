@@ -716,22 +716,82 @@ class TSAG.I_Mouse_Build_Road
 
         # FIXME: I will need to do some legality checking here, because arc may produce illegal geometry.
 
-        # -- Compute Orientation of points and determine normal direction towards curve circle center.
-
+        # -- Compute useful mathematical objects.
         dir01 = pt1.sub(pt0)
         dir21 = pt1.sub(pt2)
 
         ray01 = new BDS.Ray(pt0, dir01)
-        ray21 = new BDS.Ray(pt)
+        ray21 = new BDS.Ray(pt2, dir21)
+
+
+        # -- Compute Orientation of points and determine normal direction towards curve circle center.
+
+        # -1, 0, or 1
+        orientation = ray01.line_side_test(pt2)
+        orientation = BDS.Math.sign(orientation)
+
+        # No Curve.
+        if orientation == 0
+            return []
 
         # -- Compute The rays ray01 and ray21 offset towards the center from line 01 and line 21.
 
+        perp_dir_pt0 = ray01.getRightPerpendicularDirection().multScalar(orientation)
+        perp_dir_pt0 = perp_dir_pt0.normalize()
+        offset_pt0   = pt0.add(perp_dir_pt0.multScalar(radius))
+
+        perp_dir_pt2 = ray21.getLeftPerpendicularDirection().multScalar(orientation)
+        perp_dir_pt2 = perp_dir_pt2.normalize()
+        offset_pt2   = pt2.add(perp_dir_pt2.multScalar(radius))
+
+        offset_ray01 = new BDS.Ray(offset_pt0, dir01)
+        offset_ray21 = new BDS.Ray(offset_pt2, dir21)
+
         # -- The intersection is the center of the arc's circle.
+        arc_center_pt = offset_ray01.intersect_ray(offset_ray21)
+
+        # FIXME: This signals invalid geometry.
+        if arc_center_pt == null
+            return []
 
         # -- Find the start and ending angles and the cooresponding radial length.
+        angle1 = perp_dir_pt0.multScalar(-1).angle()
+        angle2 = perp_dir_pt2.multScalar(-1).angle()
 
-        # -- Discretize the arc curve.
+        seg_length = TSAG.style.discretization_length
 
+        curve_pts = []
+
+        # If we are in left orientation, then we reverse the angles to minnimum, maximum order.
+        # We later reverse the points for ordering them correctly in road path order.
+        if orientation < 0
+            temp = angle1
+            angle1 = angle2
+            angle2 = temp
+
+        angle2 += Math.PI*2 if angle2 < angle1
+        angle_diff = angle2 - angle1
+        arc_length = radius*angle_diff
+
+        len = Math.ceil(arc_length / seg_length)
+
+        for i in [0...len]
+            angle = angle1 + i*(angle2 - angle1)/len
+            pt = BDS.Point.directionFromAngle(angle)
+            curve_pts.push(arc_center_pt.add(pt.multScalar(radius)))
+
+        # Reverse if left orientation.
+        if orientation < 0
+            curve_pts = curve_pts.reverse()
+
+        isects = []
+        for pt in curve_pts
+            # Intermediate vertices are very simple to construct.
+            isect_obj = {type:'i', point:pt}
+            isects.push(isect_obj)
+            @road.addPoint(@pt_to_vec(pt))
+
+        return isects
 
     # BDS.Point, BDS.Point, BDS.Point -> List of intermediate intersection objects.
     _quadraticBezier: (pt0, pt1, pt2) ->
