@@ -51,3 +51,4 @@ Roads:
  - Have highlight be constrained to point in road face, rather than point in road bounding box.
  - Fix endpoint behavior and building a road with a point inside of another road, rather than crossing it with a line.
    The logic is there, but the functionality is not.
+ - Fix bugs from degenerate roads, such as those formed when by faulty mouse double clicks in the same place accidently.
