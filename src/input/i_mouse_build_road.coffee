@@ -701,7 +701,42 @@ class TSAG.I_Mouse_Build_Road
         # rather than an arc.
         # We will also need to modify the road.
 
-        prefix = []
+        #prefix = @_quadraticBezier(pt0, pt1, pt2);
+        prefix = @_arc(pt0, pt1, pt2, TSAG.style.radius_speed1);
+
+        # Add the curve points as a prefix to the last segment.
+        @isects_last_segment = prefix.concat(@isects_last_segment)
+
+        return
+
+    # Computes pts along an arc.
+    # The arc will have the given radius and will start on and tangent to the line 01 and end tangent to the line 12.
+    # BDS.Point, BDS.Point, BDS.Point -> List of intermediate intersection objects.
+    _arc: (pt0, pt1, pt2, radius) ->
+
+        # FIXME: I will need to do some legality checking here, because arc may produce illegal geometry.
+
+        # -- Compute Orientation of points and determine normal direction towards curve circle center.
+
+        dir01 = pt1.sub(pt0)
+        dir21 = pt1.sub(pt2)
+
+        ray01 = new BDS.Ray(pt0, dir01)
+        ray21 = new BDS.Ray(pt)
+
+        # -- Compute The rays ray01 and ray21 offset towards the center from line 01 and line 21.
+
+        # -- The intersection is the center of the arc's circle.
+
+        # -- Find the start and ending angles and the cooresponding radial length.
+
+        # -- Discretize the arc curve.
+
+
+    # BDS.Point, BDS.Point, BDS.Point -> List of intermediate intersection objects.
+    _quadraticBezier: (pt0, pt1, pt2) ->
+
+        isects = []
 
         d1 = pt1.sub(pt0)
         d2 = pt2.sub(pt1)
@@ -721,13 +756,10 @@ class TSAG.I_Mouse_Build_Road
 
             # Intermediate vertices are very simple to construct.
             isect_obj = {type:'i', point:pt}
-            prefix.push(isect_obj)
+            isects.push(isect_obj)
             @road.addPoint(@pt_to_vec(pt))
 
-        # Add the curve points as a prefix to the last segment.
-        @isects_last_segment = prefix.concat(@isects_last_segment)
-
-        return
+        return isects
 
     vec_to_pt: (vec) ->
         x = vec.x

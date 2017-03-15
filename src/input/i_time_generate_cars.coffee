@@ -77,11 +77,12 @@ class TSAG.I_Time_Generate_Cars
                 # Turn right 1 or 2 times. (right or straight.)
                 times = Math.floor(Math.random()*2) + 1
 
-                for i in [0...times]
-                    outgoing_halfedge = incoming_halfedge.twin.prev.twin
+                # Rotate incoming halfedge counter clockwise.
+                for i in [0...times] by 1
+                    incoming_halfedge = incoming_halfedge.twin.prev
 
-                # Turn Left.
-                #outgoing_halfedge = incoming_halfedge.next
+                # Flip incoming to outcoming.
+                outgoing_halfedge = incoming_halfedge.twin
 
                 # Note: Roads are associated to full edges.
                 road = outgoing_halfedge.edge.data.element

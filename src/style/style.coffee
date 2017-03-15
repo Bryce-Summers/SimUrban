@@ -9,6 +9,9 @@
 TSAG.init_style = () ->
     TSAG.style = 
     {
+
+        radius_speed1: 50,
+
         discretization_length: 10,
         road_offset_amount: 10,
 
