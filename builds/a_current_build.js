@@ -1,5 +1,5 @@
 /*! Sim Urban, a project by Bryce Summers.
- *  Single File concatenated by Grunt Concatenate on 15-03-2017
+ *  Single File concatenated by Grunt Concatenate on 16-03-2017
  */
 /*
  * Defines the Traffic Simulation and Game namespace.
@@ -196,6 +196,10 @@ TSAG = {};
 
     E_Super.prototype.getAgents = function(out) {
       throw new Error("Destroy is unimplemented for this element!!!");
+    };
+
+    E_Super.prototype.containsPt = function(pt) {
+      return this._bvh.query_point(pt) !== null;
     };
 
     return E_Super;
@@ -461,12 +465,16 @@ Game elements that are topologically associated with faces.
     };
 
     E_Network.prototype.query_elements_pt = function(x, y) {
-      var elements, i, len, polyline, polylines;
-      polylines = this._bvh.query_point_all(new BDS.Point(x, y));
+      var element, elements, i, len, polyline, polylines, pt;
+      pt = new BDS.Point(x, y);
+      polylines = this._bvh.query_point_all(pt);
       elements = [];
       for (i = 0, len = polylines.length; i < len; i++) {
         polyline = polylines[i];
-        elements.push(polyline.getAssociatedData());
+        element = polyline.getAssociatedData();
+        if (element.containsPt(pt)) {
+          elements.push(element);
+        }
       }
       return elements;
     };
@@ -742,6 +750,28 @@ Game elements that are topologically associated with faces.
       return TSAG.style.road_offset_amount * this.lanes.length;
     };
 
+    E_Road.prototype.getClosePointOnCenterLine = function(pt) {
+      var dir, end_vertex, half_width, halfedge, p1, p2, par, perp, pt_on_road, ray, ref, v1, v2;
+      halfedge = this.getHalfedge();
+      end_vertex = this.getEndVertex();
+      half_width = this.getWidth() / 2;
+      while (halfedge.vertex !== end_vertex) {
+        v1 = halfedge.vertex;
+        v2 = halfedge.twin.vertex;
+        p1 = v1.data.point;
+        p2 = v2.data.point;
+        dir = p2.sub(p1);
+        ray = new BDS.Ray(p1, dir);
+        ref = ray.getPerpAndParLengths(pt), perp = ref[0], par = ref[1];
+        if (perp <= half_width && par >= 0 && par <= 1) {
+          pt_on_road = ray.getPointAtTime(par);
+          return [pt_on_road, halfedge.edge];
+        }
+        halfedge = halfedge.next;
+      }
+      return [null, null];
+    };
+
     return E_Road;
 
   })(TSAG.E_Super);
@@ -777,7 +807,23 @@ Game elements that are topologically associated with faces.
       this._overlays = new THREE.Object3D();
       this._overlays.name = "Overlays";
       view.add(this._overlays);
+      this.initializeMessageText();
     }
+
+    E_Scene.prototype.initializeMessageText = function() {
+      var text2;
+      text2 = document.createElement('div');
+      text2.style.position = 'absolute';
+      text2.style.zIndex = 1;
+      text2.style.width = 100;
+      text2.style.height = 100;
+      text2.style.backgroundColor = "blue";
+      text2.innerHTML = "[Blank]";
+      text2.style.top = 200 + 'px';
+      text2.style.left = 200 + 'px';
+      document.body.appendChild(text2);
+      return this.message_text = text2;
+    };
 
     E_Scene.prototype.constructRandomBuildings = function() {
       var building, h, i, j, pos, rz, scale, w, x, y;
@@ -827,6 +873,21 @@ Game elements that are topologically associated with faces.
 
     E_Scene.prototype.getRoads = function() {
       return this._roads;
+    };
+
+    E_Scene.prototype.ui_message = function(str, params) {
+      if (params.type === 'info') {
+        this.message_text.style.backgroundColor = "blue";
+        if (params.element) {
+          params.element.revertFillColor();
+        }
+      } else if (params.type === 'error') {
+        this.message_text.style.backgroundColor = "red";
+        if (params.element) {
+          params.element.setFillColor(TSAG.style.error);
+        }
+      }
+      return this.message_text.innerHTML = str;
     };
 
     return E_Scene;
@@ -1115,11 +1176,12 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.mouse_down = function(event) {
-      var dist, isect, isect_obj, j, len1, max_length, pos, pt, ref, x, y;
+      var dist, isect, isect_obj, j, last_isect, len1, max_length, pos, pt, ref, x, y;
       if (this.state === "idle") {
         this.road = new TSAG.E_Road();
         this.network.addVisual(this.road.getVisual());
-        isect_obj = this.classify_or_construct_intersection(event.x, event.y);
+        pt = new BDS.Point(event.x, event.y);
+        isect_obj = this.classify_or_construct_intersection(pt);
         this.start_or_end_point(isect_obj);
         this.isects.push(isect_obj);
         pt = isect_obj.point;
@@ -1135,18 +1197,23 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         this._mousePrevious.x = event.x;
         this._mousePrevious.y = event.y;
       } else if (this.state === "building") {
-        if (!this.legal) {
-          return;
-        }
+
+        /*
+        if not @legal()
+             * Play an error noise, flash the road, etc.
+             * Let the user know that this is an erroneous action.
+            return
+         */
         dist = TSAG.Math.distance(event.x, event.y, this._mousePrevious.x, this._mousePrevious.y);
         if (dist > this._min_dist) {
           pos = this.next_point;
           pos.x = Math.floor(pos.x);
           pos.y = Math.floor(pos.y);
-          isect_obj = this.classify_or_construct_intersection(event.x, event.y);
+          pt = new BDS.Point(pos.x, pos.y);
+          isect_obj = this.classify_or_construct_intersection(pt);
           pos = isect_obj.point;
           this.road.updateLastPoint(pos);
-          this.next_point = new THREE.Vector3(event.x + .01, event.y + .01, 0);
+          this.next_point = new THREE.Vector3(pos.x + .01, pos.y + .01, 0);
           this.road.addPoint(this.next_point);
           this._mousePrevious.x = event.x;
           this._mousePrevious.y = event.y;
@@ -1159,7 +1226,13 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
             this.isects.push(isect);
           }
           this.isects_last_segment = [];
-          this.isects.push(isect_obj);
+          last_isect = this.isects[this.isects.length - 1];
+          dist = last_isect.point.distanceTo(isect_obj.point);
+          if (dist > this.road.getWidth()) {
+            this.isects.push(isect_obj);
+          } else if (isect_obj.isect !== void 0) {
+            this.network.removeVisual(isect_obj.isect.getVisual());
+          }
           this.road.setRevert();
         } else {
           this.finish();
@@ -1167,10 +1240,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
       }
     };
 
-    I_Mouse_Build_Road.prototype.classify_or_construct_intersection = function(x, y) {
-      var element, intersection, isect_pt, out, pt;
-      pt = new BDS.Point(x, y);
-      element = this._getIsectOrRoadAtPt();
+    I_Mouse_Build_Road.prototype.classify_or_construct_intersection = function(pt) {
+      var edge, element, err, intersection, isect_pt, out, ref, road;
+      element = this._getIsectOrRoadAtPt(pt);
       out = null;
       if (element instanceof TSAG.E_Intersection) {
         isect_pt = element.getPoint();
@@ -1180,14 +1252,22 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           point: isect_pt
         };
       } else if (element instanceof TSAG.E_Road) {
+        road = element;
+        ref = road.getClosePointOnCenterLine(pt), pt = ref[0], edge = ref[1];
+        if (pt === null) {
+          err = new Error("Pt was not actually inside of the road proper. Check you collision detection and bounds.");
+          console.log(err.stack);
+          debugger;
+          throw err;
+        }
         intersection = new TSAG.E_Intersection(pt);
-        this.network.addVisual(intersection.getVisual());
         out = {
           isect: intersection,
           type: 's',
-          road: start_element,
-          point: pt
+          road_edge: edge,
+          point: intersection.getPoint()
         };
+        this.network.addVisual(out.isect.getVisual());
       } else {
         out = {
           type: 'i',
@@ -1211,9 +1291,43 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     I_Mouse_Build_Road.prototype.mouse_up = function(event) {};
 
     I_Mouse_Build_Road.prototype.mouse_move = function(event) {
+      var dir, dist, i1, i2, len, p1, p2, pt, ray;
       if (this.state === "building") {
+        this.e_scene.ui_message("Building Road.", {
+          type: 'info',
+          element: this.road
+        });
+        dist = TSAG.Math.distance(event.x, event.y, this._mousePrevious.x, this._mousePrevious.y);
+        if (dist <= this._min_dist) {
+          if (this.isects.length <= 2) {
+            this.e_scene.ui_message("Click to cancel road.", {
+              type: 'info',
+              element: this.road
+            });
+          } else {
+            this.e_scene.ui_message("Click to complete road.", {
+              type: 'info',
+              element: this.road
+            });
+          }
+          return;
+        }
         this.next_point.x = event.x + .01;
         this.next_point.y = event.y + .01;
+        len = this.isects.length;
+        if (len > 1) {
+          i1 = this.isects[len - 1];
+          if (i1.type !== 'i') {
+            i2 = this.isects[len - 2];
+            p1 = i1.point;
+            p2 = i2.point;
+            dir = p2.sub(p1);
+            ray = new BDS.Ray(p1, dir);
+            pt = this.vec_to_pt(this.next_point);
+            pt = ray.projectPoint(pt);
+            this.next_point = this.pt_to_vec(pt);
+          }
+        }
         return this.updateTemporaryRoad();
       }
     };
@@ -1223,8 +1337,15 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
       if (this.state !== "building") {
         return;
       }
-      this.road.removeLastPoint();
       this.state = "idle";
+      this.e_scene.ui_message("", {
+        type: "info"
+      });
+      if (this.isects.length <= 2) {
+        this._cancel();
+        return;
+      }
+      this.road.removeLastPoint();
       max_length = TSAG.style.discretization_length;
       this.road.updateDiscretization(max_length);
       end_pt = this.road.getLastPoint();
@@ -1336,6 +1457,28 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
        */
       this.isects = [];
       this.isects_last_segment = [];
+    };
+
+    I_Mouse_Build_Road.prototype._cancel = function() {
+      var isect_obj, j, k, len1, len2, ref, ref1;
+      if (this.road) {
+        this.network.removeVisual(this.road.getVisual());
+      }
+      ref = this.isects_last_segment;
+      for (j = 0, len1 = ref.length; j < len1; j++) {
+        isect_obj = ref[j];
+        this.isects.push(isect_obj);
+      }
+      ref1 = this.isects;
+      for (k = 0, len2 = ref1.length; k < len2; k++) {
+        isect_obj = ref1[k];
+        if (isect_obj.type !== 'i') {
+          this.network.removeVisual(isect_obj.isect.getVisual());
+        }
+      }
+      this.road = null;
+      this.isects = [];
+      return this.isects_last_segment = [];
     };
 
     I_Mouse_Build_Road.prototype._populate_split_path = function(road, split_vert) {
@@ -1474,7 +1617,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype.createTempIntersections = function() {
-      var e_polyline, e_road, elem, elements, j, last_direction, last_point, len, len1, p1, p2, polyline, pt1, pt2, pt3, query_box, query_polyline, temp_polyline, width;
+      var dir1, dir2, e_polyline, e_road, elem, elements, far_enough, isect_obj, j, last_intersection_point, last_point, len, len1, polyline, pt1, pt2, pt3, query_box, temp_polyline;
       polyline = this.road.getCenterPolyline();
       temp_polyline = polyline.getLastSegment();
       query_box = temp_polyline.generateBoundingBox();
@@ -1487,17 +1630,18 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         }
       }
       last_point = temp_polyline.getLastPoint();
-      last_direction = temp_polyline.getLastDirection();
-      e_road = this._getRoadAtPt(last_point.x, last_point.y);
-      if (e_road !== null) {
-        e_polyline = e_road.getCenterPolyline();
-        width = e_road.getWidth();
-        p1 = last_point;
-        p2 = last_point.add(last_direction.multScalar(width));
-        query_polyline = new BDS.Polyline(false, [p1, p2]);
-        this._intersectPolygons(e_polyline, query_polyline, e_road);
+      far_enough = true;
+      if (this.isects_last_segment.length > 0) {
+        last_intersection_point = this.isects_last_segment[this.isects_last_segment.length - 1].point;
+        far_enough = last_intersection_point.distanceTo(last_point) > this.road.getWidth();
       }
-      if (this.isects.length >= 2) {
+      e_road = this._getRoadAtPt(last_point);
+      if (e_road !== null && far_enough) {
+        isect_obj = this.classify_or_construct_intersection(last_point);
+        this.network.addVisual(isect_obj.isect.getVisual());
+        this.isects_last_segment.push(isect_obj);
+      }
+      if (this.isects.length >= 2 && this.isects[this.isects.length - 1].type === 'i') {
         len = this.isects.length;
         pt1 = this.isects[len - 2].point;
         pt2 = this.isects[len - 1].point;
@@ -1505,6 +1649,16 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
           pt3 = this.isects_last_segment[0].point;
         } else {
           pt3 = last_point;
+        }
+        dir1 = pt1.sub(pt2);
+        dir2 = pt3.sub(pt2);
+        if (dir1.angleBetween(dir2) < Math.PI / 2) {
+          this.road.revert();
+          this.e_scene.ui_message("Error: Curve is too sharp!", {
+            type: "error",
+            element: this.road
+          });
+          return;
         }
         this.road.removeLastPoint();
         last_point = this.road.removeLastPoint();
@@ -1616,7 +1770,7 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
     };
 
     I_Mouse_Build_Road.prototype._intersectPolygons = function(perm_poly, new_poly, road_in_embedding) {
-      var data, edge, edge_index, halfedge, i, intersection, isect_datas, j, k, len1, pt, ref;
+      var data, edge, edge_index, halfedge, i, intersection, isect_datas, isect_obj, j, k, len1, pt, ref;
       isect_datas = perm_poly.report_intersections_with_polyline(new_poly);
       for (j = 0, len1 = isect_datas.length; j < len1; j++) {
         data = isect_datas[j];
@@ -1628,14 +1782,14 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
         }
         edge = halfedge.edge;
         intersection = new TSAG.E_Intersection(pt);
-        this.isects_last_segment.push({
+        isect_obj = {
           isect: intersection,
           type: 's',
           road_edge: edge,
           point: intersection.getPoint()
-        });
+        };
+        this.isects_last_segment.push(isect_obj);
         this.network.addVisual(intersection.getVisual());
-        this.network.addCollisionPolygon(intersection.getCollisionPolygon());
       }
 
       /*
@@ -1646,9 +1800,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
        */
     };
 
-    I_Mouse_Build_Road.prototype._getIsectOrRoadAtPt = function(x, y) {
+    I_Mouse_Build_Road.prototype._getIsectOrRoadAtPt = function(pt) {
       var elem, elems, j, k, len1, len2;
-      elems = this.network.query_elements_pt(x, y);
+      elems = this.network.query_elements_pt(pt.x, pt.y);
       for (j = 0, len1 = elems.length; j < len1; j++) {
         elem = elems[j];
         if (elem instanceof TSAG.E_Intersection) {
@@ -1664,9 +1818,9 @@ FIXME: Allow people to toggle certain sub-controllers on and off.
       return null;
     };
 
-    I_Mouse_Build_Road.prototype._getRoadAtPt = function(x, y) {
+    I_Mouse_Build_Road.prototype._getRoadAtPt = function(pt) {
       var elem, elems, j, len1;
-      elems = this.network.query_elements_pt(x, y);
+      elems = this.network.query_elements_pt(pt.x, pt.y);
       for (j = 0, len1 = elems.length; j < len1; j++) {
         elem = elems[j];
         if (elem instanceof TSAG.E_Road) {

@@ -55,3 +55,7 @@ Roads:
  - Detect Road self intersections.
  - Color code the road creation to enhance the user experience.
  - Do legality checking.
+
+ - Investigate Topology Bug.
+ - Constrain curves to Pi/2 Radians (90 degrees) max.
+ - Create a sophisticated user experience and Legal road detection and feedback to the user.

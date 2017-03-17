@@ -187,3 +187,8 @@ class TSAG.E_Super
     # This might be used in road demolition to get a list of cars that need to be moved.
     getAgents: (out) ->
         throw new Error("Destroy is unimplemented for this element!!!")
+
+
+    # Returns true if one of this element's collision geometries contains the given point.
+    containsPt: (pt) ->
+        return @_bvh.query_point(pt) != null

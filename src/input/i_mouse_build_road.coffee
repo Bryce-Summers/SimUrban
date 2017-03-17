@@ -67,12 +67,15 @@ class TSAG.I_Mouse_Build_Road
             @road = new TSAG.E_Road()
             @network.addVisual(@road.getVisual())
 
+
+            pt = new BDS.Point(event.x, event.y)
             # Extract the original points for possible modification.
-            isect_obj = @classify_or_construct_intersection(event.x, event.y)
+            isect_obj = @classify_or_construct_intersection(pt)
             @start_or_end_point(isect_obj)
             # The first intersection is the first finalized location.
             @isects.push(isect_obj)
 
+            # the point may have changed.
             pt = isect_obj.point
             x = pt.x
             y = pt.y
@@ -98,10 +101,13 @@ class TSAG.I_Mouse_Build_Road
         # Road Building State.
         else if @state == "building"
 
-            if not @legal
+            
+            ###
+            if not @legal()
                 # Play an error noise, flash the road, etc.
                 # Let the user know that this is an erroneous action.
                 return
+            ###
             
 
             dist = TSAG.Math.distance(
@@ -112,22 +118,28 @@ class TSAG.I_Mouse_Build_Road
             # Build more road if the user clicks far enough away.
             if dist > @_min_dist
 
+                # Note: In this case, we will not be using the event positions.
+
                 # Round last point.
                 pos = @next_point
                 pos.x = Math.floor(pos.x)
                 pos.y = Math.floor(pos.y)
 
+                # FIXME: Only use BDS.Points in Game Logic.
+                pt = new BDS.Point(pos.x, pos.y)
+
                 # Cosntruct a new isect_obj at the given mouse clicked position.
-                isect_obj = @classify_or_construct_intersection(event.x, event.y)
+                isect_obj = @classify_or_construct_intersection(pt)
                 # The point may have shifted if there is a collision with an element at this location.
                 pos = isect_obj.point
 
                 @road.updateLastPoint(pos)
 
                 # We use offsets to prevent 0 length splines that cause degenerate behavior.
-                @next_point = new THREE.Vector3( event.x + .01, event.y + .01, 0)
+                @next_point = new THREE.Vector3( pos.x + .01, pos.y + .01, 0)
                 @road.addPoint(@next_point)
 
+                # FIXME: Maybe I should use the position of the intersection instead.
                 @_mousePrevious.x = event.x
                 @_mousePrevious.y = event.y
 
@@ -142,7 +154,17 @@ class TSAG.I_Mouse_Build_Road
 
                 # Empty the temporary intersection array.
                 @isects_last_segment = []
-                @isects.push(isect_obj)
+
+                # Add the end point to the array,
+                # if it is not duplicating an the last intersection point on the last segment.
+                # This may happen if the user builds a point on a road where the mouse has already crossed the road.
+                last_isect = @isects[@isects.length - 1]
+                dist = last_isect.point.distanceTo(isect_obj.point)
+                if dist > @road.getWidth()
+                    @isects.push(isect_obj)
+                # Otherwise, we remove its visual if it exists.
+                else if isect_obj.isect != undefined
+                    @network.removeVisual(isect_obj.isect.getVisual())
 
                 # Every time the user moves their mouse and modifies the last segment, the road will revert
                 # back to this state before adding the extra intersection points.
@@ -163,14 +185,12 @@ class TSAG.I_Mouse_Build_Road
     # based on whether this location is in an existing intersection, road, or area.
     # Constructs a new object if it is in an area.
     # The obj will contain a possibly shifted .point value which aligns the point with the existing infrastructure.
-    classify_or_construct_intersection: (x, y) ->
-
-        pt = new BDS.Point(x, y)
+    classify_or_construct_intersection: (pt) ->
 
         # Categorize the starting point as a 'p', 's', 't', or 'i' point.
         # based on whether the original point is in an isect, a road, or empty space/area,
         # Intermediate points will be constructed at curve locations.
-        element = @_getIsectOrRoadAtPt()
+        element = @_getIsectOrRoadAtPt(pt)
 
         out = null
 
@@ -182,9 +202,22 @@ class TSAG.I_Mouse_Build_Road
             out = {isect:start_element, type:'p', point:isect_pt}
         # 's' Split point intersection.
         else if element instanceof TSAG.E_Road
+
+            road = element
+            
+            [pt, edge] = road.getClosePointOnCenterLine(pt)
+
+            if pt == null
+
+                err = new Error("Pt was not actually inside of the road proper. Check you collision detection and bounds.")
+                console.log(err.stack)
+                debugger
+                throw err
+
             intersection = new TSAG.E_Intersection(pt)
-            @network.addVisual(intersection.getVisual())
-            out = {isect:intersection, type:'s', road:start_element, point:pt}
+
+            out = {isect:intersection, type:'s', road_edge:edge, point:intersection.getPoint()}           
+            @network.addVisual(out.isect.getVisual())
         # Intermediate point. Callers will need to modify this into a tail point if necessary.
         else
             #intersection = new TSAG.E_Intersection(pt)
@@ -214,9 +247,46 @@ class TSAG.I_Mouse_Build_Road
 
         if @state == "building"
 
+            @e_scene.ui_message("Building Road.", {type:'info', element:@road})
+
+
+            # If the user is close to the previous point, then we indicate that they made finish the road.
+            dist = TSAG.Math.distance(
+                event.x, event.y,
+                @_mousePrevious.x,
+                @_mousePrevious.y)
+
+            if dist <= @_min_dist
+
+                if @isects.length <= 2 # 1 is dummy.
+                    @e_scene.ui_message("Click to cancel road.", {type:'info', element:@road})
+                else
+                    @e_scene.ui_message("Click to complete road.", {type:'info', element:@road})
+                return
+
+
             # We use random numbers to ensure a lack of degeneracy.
             @next_point.x = event.x + .01
             @next_point.y = event.y + .01
+
+            # Ensure the straightness of roads through non-intermediate 
+            # intersections by projecting point onto ray.
+            len = @isects.length # First road can go any way.
+            if len > 1
+                i1 = @isects[len - 1]
+                if i1.type != 'i'
+                    i2 = @isects[len - 2]
+
+                    p1 = i1.point
+                    p2 = i2.point
+                    dir = p2.sub(p1)
+                    ray = new BDS.Ray(p1, dir)
+
+                    pt = @vec_to_pt(@next_point)
+
+                    # Projection ensures straightness.
+                    pt = ray.projectPoint(pt)
+                    @next_point = @pt_to_vec(pt)
 
             # Update the found intersections.
             @updateTemporaryRoad()
@@ -224,19 +294,27 @@ class TSAG.I_Mouse_Build_Road
 
     # This may be called from anyone who knows about this controller.
     # For instance it may be called when the user transitions into another controller state.
+    # This function will cancel the road if necessary.
     finish: () ->
 
         # We only have work to finish when we are in building mode.
         if @state != "building"
             return
 
+        # One way or another, we are transitioning back to the idle state.
+        @state = "idle"
+
+        @e_scene.ui_message("", {type:"info"})
+
+        # 1 real, 1 dummy.
+        if @isects.length <= 2
+            @_cancel()
+            return
 
         # Indicate to the user that they can click now to end the interaction.
 
         # Remove the dummy modification point at the end.
         @road.removeLastPoint()
-
-        @state = "idle"
 
         # FIXME: This should be changed to a function that updates the intermediate points for curves.
         max_length = TSAG.style.discretization_length
@@ -392,6 +470,24 @@ class TSAG.I_Mouse_Build_Road
         @isects = []
         @isects_last_segment = []
         return
+
+    # Cancels the road construction, deletes all allocated elements.
+    _cancel: () ->
+        if @road
+            @network.removeVisual(@road.getVisual())
+
+        for isect_obj in @isects_last_segment
+            @isects.push(isect_obj)
+
+        for isect_obj in @isects
+            if isect_obj.type != 'i'
+                @network.removeVisual(isect_obj.isect.getVisual())
+
+        @road = null
+
+        @isects = []
+        @isects_last_segment = []
+
 
     # E_Road -> isects[]
     _populate_split_path: (road, split_vert) ->
@@ -556,6 +652,7 @@ class TSAG.I_Mouse_Build_Road
         @road.updateLastPoint(@next_point)
 
         # FIXME: Perhaps this should be dependant on the current view bounds...
+        # We discretize here because we need to check for legality.
         max_length    = TSAG.style.discretization_length
         @road.updateDiscretization(max_length)
 
@@ -576,6 +673,7 @@ class TSAG.I_Mouse_Build_Road
         # 3. Check to see if endpoints
         @createTempIntersections()
 
+        # We have to rediscretize, because we may have added some curved segments.
         @road.updateDiscretization(max_length)
 
 
@@ -636,37 +734,31 @@ class TSAG.I_Mouse_Build_Road
                 @_intersectPolygons(e_polyline, temp_polyline, elem)
 
 
-        # -- Step 2. Check if the latest endpoint is within the original road embedding.
-
-        # first_point = temp_polyline.getFirstPoint()
+        # -- Step 2. Add the end point if it is on an established road...
         last_point     = temp_polyline.getLastPoint()
-        last_direction = temp_polyline.getLastDirection()
 
-        e_road = @_getRoadAtPt(last_point.x, last_point.y)
+        # But only if it is sufficiently far away from the last intersection found.
+        far_enough = true
+        if @isects_last_segment.length > 0
+            last_intersection_point = @isects_last_segment[@isects_last_segment.length - 1].point
+            far_enough = last_intersection_point.distanceTo(last_point) > @road.getWidth() # @_min_dist?
+       
+        e_road = @_getRoadAtPt(last_point)
         
         # ASSUMPTION: We will not be intersecting an intersection,
         # because that would be caught by the legality checker...
-        if e_road != null
+        if e_road != null and far_enough
 
-            # FIXME: Instead, I should use the network
-            e_polyline = e_road.getCenterPolyline()
-            
-            width = e_road.getWidth()
-
-            # Create an intersection polyline of at least enough width
-            # to get to the midpoint of the existing center line.
-            p1 = last_point
-            p2 = last_point.add(last_direction.multScalar(width))
-            query_polyline = new BDS.Polyline(false, [p1, p2])
-            # Adds intersections to @isect_last_segment
-            @_intersectPolygons(e_polyline, query_polyline, e_road)
+            isect_obj = @classify_or_construct_intersection(last_point)
+            @network.addVisual(isect_obj.isect.getVisual())
+            @isects_last_segment.push(isect_obj)
 
         # After the intersections have been computed,
         # we add an intermediate curve, where
         # pt1 is the last non - control isect pt.
         # pt2 is the intermediate point at the end of @isects, that is treated as a control point.
         # pt3 is the first intersection computed along this contructed linear segment above in this function.
-        if @isects.length >= 2
+        if @isects.length >= 2 and @isects[@isects.length - 1].type == 'i'
 
             len = @isects.length
             pt1 = @isects[len - 2].point
@@ -675,6 +767,16 @@ class TSAG.I_Mouse_Build_Road
                 pt3 = @isects_last_segment[0].point
             else
                 pt3 = last_point
+
+            dir1 = pt1.sub(pt2)
+            dir2 = pt3.sub(pt2)
+
+            # Curves need at least 90 degrees or my algorithm becomes degenerate.
+            if dir1.angleBetween(dir2) < Math.PI/2
+                @road.revert()
+                @e_scene.ui_message("Error: Curve is too sharp!", {type:"error", element:@road})
+                return
+
 
             # Remove the current point and the intermediate point from the road.
             # They will be replaced in @_createTempCurve.
@@ -842,7 +944,7 @@ class TSAG.I_Mouse_Build_Road
         isect_datas = perm_poly.report_intersections_with_polyline(new_poly)
 
         # FIXME: What happens if the intersections are out of order with regards to
-        # the road that we are constructing?
+        # the road that we are constructing.
 
         # Create an intersection for every one of these points.
         for data in isect_datas
@@ -859,13 +961,15 @@ class TSAG.I_Mouse_Build_Road
             edge = halfedge.edge
 
             intersection = new TSAG.E_Intersection(pt)
-            @isects_last_segment.push({isect:intersection, type:'s', road_edge:edge, point:intersection.getPoint()})
+            isect_obj = {isect:intersection, type:'s', road_edge:edge, point:intersection.getPoint()}
+
+            @isects_last_segment.push(isect_obj)
 
             # Add the intersection visually and spatially to the network.
             @network.addVisual(intersection.getVisual())
-            @network.addCollisionPolygon(intersection.getCollisionPolygon())
+            #@network.addCollisionPolygon(intersection.getCollisionPolygon())
 
-        return
+        return #out
 
         ###
         # Add intersections every time the mouse cursor intersects an older road.
@@ -876,8 +980,10 @@ class TSAG.I_Mouse_Build_Road
 
     # Returns a road or intersections at the given point.
     # Preference is given to returning an intersection.
-    _getIsectOrRoadAtPt: (x, y) ->
-        elems = @network.query_elements_pt(x, y)
+    _getIsectOrRoadAtPt: (pt) ->
+
+        # FIXME: Convert this call to function on a point.
+        elems = @network.query_elements_pt(pt.x, pt.y)
 
         # Look for an intersection first,
         # since they may be on top of roads.
@@ -894,8 +1000,8 @@ class TSAG.I_Mouse_Build_Road
 
     # Returns the TSAG.E_Road at the given point in the network embedding.
     # Returns null if not found.
-    _getRoadAtPt: (x, y) ->
-        elems = @network.query_elements_pt(x, y)
+    _getRoadAtPt: (pt) ->
+        elems = @network.query_elements_pt(pt.x, pt.y)
 
         for elem in elems
             if elem instanceof TSAG.E_Road

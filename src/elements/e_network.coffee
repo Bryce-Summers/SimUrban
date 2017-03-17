@@ -92,17 +92,23 @@ class TSAG.E_Network extends TSAG.E_Super
 
     
     # Returns all elements that are found at the given point.
+    # Performs a broad collision test, then uses the element's collision tests.
     query_elements_pt: (x, y) ->
 
-        polylines = @_bvh.query_point_all(new BDS.Point(x, y))
+        pt = new BDS.Point(x, y)
+
+        polylines = @_bvh.query_point_all(pt)
 
         elements = []
 
-        for polyline in polylines
-            elements.push(polyline.getAssociatedData())
 
-        # FIXME: Maybe I should dig one level deeper into the elements.
-        # Or make a a local element query test.
+        for polyline in polylines
+
+            # Extract the element.
+            element = polyline.getAssociatedData()
+
+            if element.containsPt(pt)
+                elements.push(element)
 
         return elements
 
