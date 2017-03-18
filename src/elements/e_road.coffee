@@ -292,7 +292,7 @@ class TSAG.E_Road extends TSAG.E_Super
             lane.getAgents(out)
 
     # Adds a car to this road,
-    # Starting at the given vertex and travelling towards the non given vertex.
+    # Starting at the given vertex and traveling towards the non given vertex.
     # FIXME: I will need to abstract this out once we have multiple lanes.
     addCar: (car, vert) ->
         if vert == @vert_start
@@ -303,3 +303,38 @@ class TSAG.E_Road extends TSAG.E_Super
     # Returns the total width of the road.
     getWidth: () ->
         TSAG.style.road_offset_amount*@lanes.length
+
+
+    # [pt, edge]
+    # Returns a pt on the road's midline that is close to the given point.
+    getClosePointOnCenterLine: (pt) ->
+
+        halfedge = @getHalfedge()
+        end_vertex = @getEndVertex()
+
+        half_width = @getWidth()/2
+
+        while halfedge.vertex != end_vertex
+
+            v1 = halfedge.vertex
+            v2 = halfedge.twin.vertex
+
+            p1 = v1.data.point
+            p2 = v2.data.point
+
+            dir = p2.sub(p1)
+
+            ray = new BDS.Ray(p1, dir)
+
+            [perp, par] = ray.getPerpAndParLengths(pt)
+
+            # Pt has to be within the width away from the center point and 
+            # should be within the segment's projected bounds.
+            if perp <= half_width and par >= 0 and par <= 1
+                pt_on_road = ray.getPointAtTime(par)
+                return [pt_on_road, halfedge.edge]
+
+            halfedge = halfedge.next
+
+        return [null, null]
+
