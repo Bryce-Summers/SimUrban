@@ -51,4 +51,13 @@ Roads:
  - Have highlight be constrained to point in road face, rather than point in road bounding box.
  - Fix endpoint behavior and building a road with a point inside of another road, rather than crossing it with a line.
    The logic is there, but the functionality is not.
+
  - Fix bugs from degenerate roads, such as those formed when by faulty mouse double clicks in the same place accidently.
+ - Detect Road self intersections.
+ - Color code the road creation to enhance the user experience.
+ - Do legality checking.
+
+ - Investigate Topology Bug.
+ - Constrain curves to Pi/2 Radians (90 degrees) max.
+ - Create a sophisticated user experience and Legal road detection and feedback to the user.
+>>>>>>> 51dc21bc504ffad3b961a7689907bb4b5741a5a5

@@ -24,6 +24,21 @@ class TSAG.E_Scene extends TSAG.E_Super
         @_overlays.name = "Overlays"
         view.add(@_overlays)
 
+        @initializeMessageText()
+
+    initializeMessageText: () ->
+        text2 = document.createElement('div')
+        text2.style.position = 'absolute'
+        text2.style.zIndex = 1; # if you still don't see the label, try uncommenting this.
+        text2.style.width  = 100
+        text2.style.height = 100
+        text2.style.backgroundColor = "blue"
+        text2.innerHTML = "[Blank]"
+        text2.style.top = 200 + 'px'
+        text2.style.left = 200 + 'px'
+        document.body.appendChild(text2)
+        @message_text = text2
+
     constructRandomBuildings: () ->
 
         # FIXME: Buildings should be factored into the network.
@@ -77,3 +92,26 @@ class TSAG.E_Scene extends TSAG.E_Super
 
     getRoads: () ->
         return @_roads
+
+    # Broadcast a UI message to the user.
+    # params: {type:, element:}
+    # type: {'info':, 'error'}
+    # element: contains an element that may be colored to reflect this message.
+    ui_message: (str, params) ->
+        
+        if params.type == 'info'
+            @message_text.style.backgroundColor = "blue"
+
+            if params.element
+                params.element.revertFillColor()
+
+        else if params.type == 'error'
+            @message_text.style.backgroundColor = "red"
+
+            if params.element
+                params.element.setFillColor(TSAG.style.error)
+
+        @message_text.innerHTML = str
+
+        return
+
