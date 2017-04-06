@@ -60,4 +60,9 @@ Roads:
  - Investigate Topology Bug.
  - Constrain curves to Pi/2 Radians (90 degrees) max.
  - Create a sophisticated user experience and Legal road detection and feedback to the user.
->>>>>>> 51dc21bc504ffad3b961a7689907bb4b5741a5a5
+
+
+Game Design:
+ - Consider providing limitations on how the roads may be directed. Randomness provides a random signal that is often not interestin to players.
+ 
+

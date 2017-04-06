@@ -8,11 +8,14 @@ Written by Bryce Summmers on 1 - 31 - 2017.
 
 ###
 
-class TSAG.I_Time_Generate_Cars
+class TSAG.I_Time_Generate_Cars extends BDS.Interface_Controller_Time
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js
     constructor: (@scene, @camera) ->
+
+        super()
+
         @time_count = 0.0
         @time_step = 2000.0
 
