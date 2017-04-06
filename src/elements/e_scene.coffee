@@ -34,8 +34,8 @@ class TSAG.E_Scene extends TSAG.E_Super
         text2.style.height = 100
         text2.style.backgroundColor = "blue"
         text2.innerHTML = "[Blank]"
-        text2.style.top = 200 + 'px'
-        text2.style.left = 200 + 'px'
+        text2.style.top = 0 + 'px'
+        text2.style.left = 0 + 'px'
         document.body.appendChild(text2)
         @message_text = text2
 

@@ -8,7 +8,7 @@ Written by Bryce Summmers on 1 - 31 - 2017.
 
 ###
 
-class TSAG.I_Time_Rotate_Buildings extends TSAG.Input_Controller
+class TSAG.I_Time_Rotate_Buildings extends BDS.Interface_Controller_All
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js

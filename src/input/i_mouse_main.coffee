@@ -7,11 +7,13 @@
 # It then pipes the input to the user's currently selected tool, such as a road building controller.
 # FIXME: Abstract all of this functionality into TSAG.Input_Controller.
 
-class TSAG.I_Mouse_Main
+class TSAG.I_Mouse_Main extends BDS.Interface_Controller_All
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js
     constructor: (@scene, @camera) ->
+
+        super()
 
         @create_cursor()
 

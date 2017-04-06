@@ -306,8 +306,8 @@ class TSAG.I_Mouse_Build_Road
 
         @e_scene.ui_message("", {type:"info"})
 
-        # 1 real, 1 dummy.
-        if @isects.length <= 2
+        # Roads must span at least 2 vertices.
+        if @isects.length < 2
             @_cancel()
             return
 
