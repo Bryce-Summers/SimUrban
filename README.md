@@ -1,7 +1,7 @@
 # Sim Urban
 Sim City for Detail Oriented Transportation Engineering, Urban Planning, etc People.
 
-[Iteration 4 Screenshot](i4.png "A road network.")
+![Iteration 4 Screenshot](https://bryce-summers.github.io/SimUrban/screenshots/i4.png "A road network.")
 
 
 #Play the Game!
