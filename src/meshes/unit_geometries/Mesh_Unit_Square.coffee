@@ -27,3 +27,32 @@ class TSAG.Mesh_Unit_Square extends TSAG.Mesh_Basic
         );
 
         super(geometry, outline)
+
+    ###
+    setup_texture_coordinates: () ->
+        @geometry.faceVertexUvs.push(uv_coords)
+
+        s = 1
+
+        v1 = new THREE.Vector2(0, 0)
+        v2 = new THREE.Vector2(s, 0)
+        v3 = new THREE.Vector2(s, s)
+        v4 = new THREE.Vector2(0, s)
+
+        uv_coords.push([v1, v2, v3])
+        uv_coords.push([v1, v3, v4])
+
+        @geometry.uvsNeedUpdate = true
+
+        @geometry.computeBoundingSphere()
+
+        @geometry.computeFaceNormals()
+        @geometry.computeVertexNormals()
+        
+        @geometry.verticesNeedUpdate = true
+                
+        # Changes to Vertex normals.
+        @geometry.normalsNeedUpdate = true
+        @geometry.colorsNeedUpdate = true
+    ###
+    

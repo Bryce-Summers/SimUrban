@@ -18,18 +18,18 @@ class TSAG.Unit_Meshes
         @_circle   = new TSAG.Mesh_Unit_Circle();
         @_triangle = new TSAG.Mesh_Unit_Triangle();
 
-    #params{color: hexvalue}
+    #params{color: hexvalue, material:}
     newSquare: (params) ->
         
         # FIXME: Once we add outlines, this might break.
-        return @_square.clone(params);
+        return @_square.clone(params)
 
     newCircle: (params) ->
         
         # FIXME: Once we add outlines, this might break.
-        return @_circle.clone(params);
+        return @_circle.clone(params)
 
     newTriangle: (params) ->
 
         # FIXME: Once we add outlines, this might break.
-        return @_triangle.clone(params);
+        return @_triangle.clone(params)

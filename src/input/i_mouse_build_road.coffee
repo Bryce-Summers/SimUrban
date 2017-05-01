@@ -1,17 +1,19 @@
-#
-# Main Mouse Input Controller.
-#
-# Refactored by Bryce Summers on 12 - 18 - 2016.
-#
-# This is the top level mouse input controller that receives all input related to mouse input.
-#
+###
 
-#
-# Mouse Input Manager
-#
-# Written by Bryce Summers on 11/22/2016
-# Abstracted on 12 - 18 - 2016.
-#
+Mouse Road building controller.
+
+Written by Bryce Summers.
+
+###
+
+###
+
+States:
+    "idle": the road building controller is currently being unused and road building is not being performed.
+    "building": legal road building is occuring.
+    "illegal": road building is occuring, but it is currently illegal.
+
+###
 
 class TSAG.I_Mouse_Build_Road
 
@@ -33,7 +35,7 @@ class TSAG.I_Mouse_Build_Road
         # The Vector at the end of the road that the user is currently dragging.
         @next_point = null
 
-        @network   = @e_scene.getNetwork()
+        @network    = @e_scene.getNetwork()
         @_generator = @network.getGenerator()
         @_linker    = @network.getLinker()
 
@@ -53,11 +55,35 @@ class TSAG.I_Mouse_Build_Road
         # This stores the intersections contained within the last region of road, which is that modifiable by mouse movement during construction.
         @isects_last_segment = []
 
+        @current_radius = TSAG.style.radius_road_local
+
+    @mode_local     = 0
+    @mode_collector = 1
+    @mode_artery    = 2
+
+    setMode: (mode) ->
+
+        if mode == @mode_local
+            @current_radius = TSAG.style.radius_road_local
+
+        else if mode == @mode_collector
+            @current_radius = TSAG.style.radius_road_collector
+
+        else if mode == @mode_collector
+            @current_radius = TSAG.style.radius_road_artery
+
+        else
+            console.log("Road build mode not supported: " + mode)
 
     isIdle: () ->
         return @state == "idle"
 
     mouse_down: (event) ->
+
+        # prevent building if in an illegal state.
+        if @state == "illegal"
+            @e_scene.ui_flash()
+            return
 
         if @state == "idle"
 
@@ -125,27 +151,39 @@ class TSAG.I_Mouse_Build_Road
                 pos.x = Math.floor(pos.x)
                 pos.y = Math.floor(pos.y)
 
-                # FIXME: Only use BDS.Points in Game Logic.
+                # We only want to use BDS.Points in Game Logic.
                 pt = new BDS.Point(pos.x, pos.y)
 
-                # Cosntruct a new isect_obj at the given mouse clicked position.
+                # Construct a new isect_obj at the given mouse clicked position.
                 isect_obj = @classify_or_construct_intersection(pt)
+
                 # The point may have shifted if there is a collision with an element at this location.
                 pos = isect_obj.point
 
                 @road.updateLastPoint(pos)
 
+                # We need the direction we are coming from to ensure that the dummy point 
+                # does not weirdly skew the line.
+                dirFromPrev = new BDS.Point(pos.x - @_mousePrevious.x,
+                                            pos.y - @_mousePrevious.y)
+                dirFromPrev = dirFromPrev.normalize()
+
+                # mouse previous is shifted to the be the location of the final effective intersection,
+                # where the mouse has been projected to be.
+                @_mousePrevious.x = pos.x
+                @_mousePrevious.y = pos.y
+
                 # We use offsets to prevent 0 length splines that cause degenerate behavior.
-                @next_point = new THREE.Vector3( pos.x + .01, pos.y + .01, 0)
+                @next_point = new THREE.Vector3( pos.x + dirFromPrev.x, pos.y + dirFromPrev.y, 0)
                 @road.addPoint(@next_point)
 
-                # FIXME: Maybe I should use the position of the intersection instead.
-                @_mousePrevious.x = event.x
-                @_mousePrevious.y = event.y
+
 
                 # Remove a control point form the permenant isects if present.
                 if @isects[@isects.length - 1].type == 'i'
                     @isects.pop()
+
+
 
                 # Move all of the latest segment intersections over to main intersection array,
                 # we will no longer have to worry about updating them.
@@ -245,7 +283,10 @@ class TSAG.I_Mouse_Build_Road
 
     mouse_move: (event) ->
 
-        if @state == "building"
+        if @state == "building" or @state == "illegal"
+
+            # Allow illegal states to be corrected.
+            @state = "building"
 
             @e_scene.ui_message("Building Road.", {type:'info', element:@road})
 
@@ -258,10 +299,10 @@ class TSAG.I_Mouse_Build_Road
 
             if dist <= @_min_dist
 
-                if @isects.length <= 2 # 1 is dummy.
-                    @e_scene.ui_message("Click to cancel road.", {type:'info', element:@road})
+                if @isects.length < 2
+                    @e_scene.ui_message("Click to cancel road.", {type:'action', element:@road})
                 else
-                    @e_scene.ui_message("Click to complete road.", {type:'info', element:@road})
+                    @e_scene.ui_message("Click to complete road.", {type:'action', element:@road})
                 return
 
 
@@ -553,12 +594,8 @@ class TSAG.I_Mouse_Build_Road
     # It adds them visually, collidable, and topologically to the network.
     construct_roads_along_isect_path: (isects) ->
 
-
-
         # FIXME: Next step, globalize debugging functions for half edge graphs, make a vertex star print debug function and find out
         # why the verts are not being linked properly.
-
-
 
         # We will be building a road the whole way through.
 
@@ -658,8 +695,9 @@ class TSAG.I_Mouse_Build_Road
 
         # 2. Check legality of the current segment. Stop and color the road red if it is not legal.
         if not @checkLegality()
+            @road.revert()
+            @road.updateDiscretization(max_length)
             @road.setFillColor(TSAG.style.error)
-
             @legal = false
             return
 
@@ -671,10 +709,12 @@ class TSAG.I_Mouse_Build_Road
         # 2. Create new temporary intersections, that would be created 
         # 2. Find the intersections with the global embedding's line bvh.
         # 3. Check to see if endpoints
-        @createTempIntersections()
+        # This function returns true if no illegalities were found.
+        @legal = @createTempIntersections()
 
         # We have to rediscretize, because we may have added some curved segments.
-        @road.updateDiscretization(max_length)
+        if @legal
+            @road.updateDiscretization(max_length)
 
 
     destroyLastSegmentIsects: () ->
@@ -700,7 +740,17 @@ class TSAG.I_Mouse_Build_Road
     # Returns true iff the last segment is legal.
     checkLegality: () ->
 
-        # Check curvature.
+        # road segment needs to be of minnimum length.
+        pline = @road.getCenterPolyline()
+        penultimate_index = pline.size() - 2
+        last_point = pline.getPoint(penultimate_index)
+        if @next_point.distanceTo(last_point) < @current_radius*2
+            @e_scene.ui_message("Error: Segment is not long enough!", {type:"error", element:@road})
+            @state = "illegal"
+            return false
+
+
+        # Note: Curvature is checked in @createTempIntersections()
 
         # Collision with an existing intersection.
 
@@ -710,6 +760,9 @@ class TSAG.I_Mouse_Build_Road
         query_box = collision_polygon.generateBoundingBox()
         # FIXME.
 
+        return true
+
+    # Signals whether the calling function should rediscretize the curve.
     createTempIntersections: () ->
 
         # -- Step 1. Check for all intermediate intersections with the Graph embedding.
@@ -732,6 +785,10 @@ class TSAG.I_Mouse_Build_Road
                 e_polyline = elem.getCenterPolyline()
                 # Adds intersections to @isect_last_segment
                 @_intersectPolygons(e_polyline, temp_polyline, elem)
+
+
+        # -- Step 2b. Sort the intersections, with intersections earlier in the segment first.
+        @_sortIsects(@isects_last_segment, temp_polyline.getFirstPoint())
 
 
         # -- Step 2. Add the end point if it is on an established road...
@@ -772,10 +829,43 @@ class TSAG.I_Mouse_Build_Road
             dir2 = pt3.sub(pt2)
 
             # Curves need at least 90 degrees or my algorithm becomes degenerate.
-            if dir1.angleBetween(dir2) < Math.PI/2
+            if dir1.angleBetween(dir2) + .00001 < Math.PI/2
+
+                # We just give up if the user is over top of another road.
+                if e_road != null
+                    @road.revert()
+                    @e_scene.ui_message("Error: Curve is too sharp!", {type:"error", element:@road})
+                    @state = "illegal"
+                    return
+                
+
+                # This code projects the last point onto the perpendicular for a 90 degree angle.
                 @road.revert()
-                @e_scene.ui_message("Error: Curve is too sharp!", {type:"error", element:@road})
-                return
+                # Make sure we are using the overl last point, not just the last point along this curve.
+                pt3 = last_point
+                dir2 = pt3.sub(pt2)
+
+                dir1_norm = dir1.normalize()
+                par_projection = dir1_norm.multScalar(dir2.dot(dir1_norm))
+                perp_projection = dir2.sub(par_projection)
+
+                # If the perpendicular projection is not large enough to accomodate a
+                # full 90 degree turn at the current turn radius, then we just label the curve as illegal.
+                if perp_projection.norm() < @current_radius*2
+
+                    # Discretize the curve pre-modification.
+                    @road.updateDiscretization(TSAG.style.discretization_length)
+                    @e_scene.ui_message("Error: Curve is too sharp!", {type:"error", element:@road})
+                    @state = "illegal"
+                    return false
+
+                # If things are alright, we go and try making the curve again.
+                @next_point = pt2.add(perp_projection)
+
+                # Update the road again using the next point.
+                # RECURSION!
+                @updateTemporaryRoad()
+                return false # The original curve produced an illegality.
 
 
             # Remove the current point and the intermediate point from the road.
@@ -790,7 +880,30 @@ class TSAG.I_Mouse_Build_Road
             # Add the current user point back, because it controls the linear expanse.
             @road.addPoint(@next_point)
 
-        return
+        # signals that the calling function should go ahead and discretize the curve.
+        return true
+
+    _sortIsects: (isect_array, start_pt) ->
+
+        # Convert the isect array into an array,
+        # sortable by distance to start_pt values.
+        sort_array = []
+        for isect in isect_array
+            pt   = isect.point
+            dist = start_pt.distanceTo(pt)
+
+            sort_array.push({key: dist, val:isect})
+
+        # sort them by using a custom compare function.
+        compare_func = (a, b) -> return a.key - b.key
+        sort_array.sort(compare_func)
+
+        # Take the isects out and they will be in the right order.
+        for i in [0...isect_array.length]
+            isect_array[i] = sort_array[i].val
+
+        # Sorted in place already...
+        return isect_array
 
     # Create temporary intersection objects.
     # visual updates only, no topology.
@@ -804,7 +917,7 @@ class TSAG.I_Mouse_Build_Road
         # We will also need to modify the road.
 
         #prefix = @_quadraticBezier(pt0, pt1, pt2);
-        prefix = @_arc(pt0, pt1, pt2, TSAG.style.radius_speed1);
+        prefix = @_arc(pt0, pt1, pt2, @current_radius);
 
         # Add the curve points as a prefix to the last segment.
         @isects_last_segment = prefix.concat(@isects_last_segment)
@@ -968,7 +1081,6 @@ class TSAG.I_Mouse_Build_Road
             # Add the intersection visually and spatially to the network.
             @network.addVisual(intersection.getVisual())
             #@network.addCollisionPolygon(intersection.getCollisionPolygon())
-
         return #out
 
         ###

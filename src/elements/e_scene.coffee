@@ -20,9 +20,18 @@ class TSAG.E_Scene extends TSAG.E_Super
         view.add(@_network.getVisual()) # FIXME: We will eventually want to rediscretize this guy depending on viewport.
 
         # The overlay layer is used to draw visual overlays that serve a purely aesthetic purpose.
+        controller_ui = null # FIXME.
+        @_overlays = new TSAG.E_UI(controller_ui)
+        view.add(@_overlays.getVisual())
+        
+        light = new THREE.AmbientLight( 0xffffff ); # White Ambient light to illuminate GUI textures.
+        view.add( light );
+
+        ###
         @_overlays = new THREE.Object3D()
         @_overlays.name = "Overlays"
         view.add(@_overlays)
+        ###
 
         @initializeMessageText()
 
@@ -72,10 +81,10 @@ class TSAG.E_Scene extends TSAG.E_Super
 
     # Adds the given THREE.Object3 to the overlay layer.
     addOverlayVisual: (obj) ->
-        @_overlays.add(obj)
+        @_overlays.getVisual().add(obj)
 
     removeOverlayVisual: (obj) ->
-        @_overlays.remove(obj)
+        @_overlays.getVisual().remove(obj)
 
     getNetwork: () ->
         return @_network
@@ -105,6 +114,12 @@ class TSAG.E_Scene extends TSAG.E_Super
             if params.element
                 params.element.revertFillColor()
 
+        if params.type == 'action'
+            @message_text.style.backgroundColor = "green"
+
+            if params.element
+                params.element.setFillColor(TSAG.style.action)
+
         else if params.type == 'error'
             @message_text.style.backgroundColor = "red"
 
@@ -115,3 +130,9 @@ class TSAG.E_Scene extends TSAG.E_Super
 
         return
 
+    # Flash the ui message to blue, it will revert back to its proper state in time.
+    ui_flash: () ->
+
+        @message_text.style.backgroundColor = "blue"
+
+        return

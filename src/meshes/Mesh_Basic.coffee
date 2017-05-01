@@ -29,9 +29,13 @@ class TSAG.Mesh_Basic extends THREE.Mesh
 
         # Act on params.
 
-        if not (params.color instanceof THREE.Color)
-            debugger
+        if params.material
+            mesh.material = params.material
 
-        mesh.material.color = params.color;
+        if params.color
+            if not (params.color instanceof THREE.Color)
+                debugger
+
+            mesh.material.color = params.color;
 
         return output;

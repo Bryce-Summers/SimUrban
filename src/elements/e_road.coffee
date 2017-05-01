@@ -330,7 +330,7 @@ class TSAG.E_Road extends TSAG.E_Super
 
             # Pt has to be within the width away from the center point and 
             # should be within the segment's projected bounds.
-            if perp <= half_width and par >= 0 and par <= 1
+            if perp <= half_width + .1 and par >= 0 and par <= 1
                 pt_on_road = ray.getPointAtTime(par)
                 return [pt_on_road, halfedge.edge]
 

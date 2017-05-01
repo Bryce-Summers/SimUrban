@@ -19,11 +19,16 @@ function init()
     // Initialize all of the global material, mesh constructor's, etc.
     TSAG.init_style();
 
-    // Scene Graph.
-    root_e_scene = new TSAG.E_Scene(window.innerWidth, window.innerHeight);
-
     // Camera.
-    var dim = {x:0, y:0, w:window.innerWidth, h:innerHeight, padding:10};
+    //var dim = {x:0, y:0, w:window.innerWidth, h:innerHeight, padding:10};
+    // Fixed reolution viewport.
+    dim = {x:0, y:0, w:1200, h:800, padding:10};
+
+    // Scene Graph.
+    root_e_scene = new TSAG.E_Scene(dim.w, dim.h);//window.innerWidth, window.innerHeight);
+
+    
+    
     root_camera = new THREE.OrthographicCamera( dim.x - dim.w/2, dim.x + dim.w/2, dim.y - dim.h/2, dim.y + dim.h/2, 1, 1000 );
     root_camera.position.z = 2;
 
@@ -54,7 +59,7 @@ function init_renderer(params)
 {
     var container = document.getElementById( 'container' );
     renderer = new THREE.WebGLRenderer(params);
-    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setPixelRatio( dim.w / dim.h /*window.devicePixelRatio*/ );
     container.appendChild( renderer.domElement );
     // Set the render based on the size of the window.
     onWindowResize();
@@ -120,7 +125,8 @@ function timestep()
 // Events.
 function onWindowResize( event )
 {
-    renderer.setSize( window.innerWidth, window.innerHeight );
+    //renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( dim.w, dim.h );
 }
 
 // FIXME: ReWire these input events.
@@ -133,7 +139,7 @@ function onKeyPress( event )
 
 function onMouseMove( event )
 {
-    input.mouse_move(event);
+    input.mouse_move(translateEvent(event));
 }
 
 function onMouseDown( e )//event
@@ -150,12 +156,12 @@ function onMouseDown( e )//event
     if(isRightMB)
         return
 
-    input.mouse_down(e);
+    input.mouse_down(translateEvent(e));
 }
 
 function onMouseUp( event )
 {
-    input.mouse_up(event);
+    input.mouse_up(translateEvent(event));
 }
 
 function animate()
@@ -167,6 +173,13 @@ function animate()
 function render()
 {
     renderer.render(root_e_scene.getVisual(), root_camera);
+}
+
+// Since we are using a fixed size screen, we will need to translate the events.
+function translateEvent(event)
+{
+    return {x: event.x -= window.innerWidth/2 - dim.w/2,
+            y: event.y/* -= window.innerHeight/2 - dim.h/2*/}
 }
 
 init();

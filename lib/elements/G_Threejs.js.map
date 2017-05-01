@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "G_Threejs.js",
+  "sourceRoot": "..\\..",
+  "sources": [
+    "src\\elements\\G_Threejs.coffee"
+  ],
+  "names": [],
+  "mappings": ";;AAAA;;;;;AAAA;EAKM,IAAI,CAAC;;;;;;AALX"
+}
