@@ -15,16 +15,47 @@ class TSAG.I_Mouse_Main extends BDS.Interface_Controller_All
 
         super()
 
-        @create_cursor()
+        @_create_cursor()
 
         @road_build_controller = new TSAG.I_Mouse_Build_Road(@scene, @camera)
         @highlight_controller  = new TSAG.I_Mouse_Highlight(@scene, @camera)
-        @_current_mouse_input_controller = @highlight_controller
+        @stats_controller = new TSAG.I_Mouse_Stats_Overlays(@scene, @camera)
+        # Represents all of the buttons.
+        @ui_controller = new TSAG.UI_Controller(@scene, @camera)
+
+        #@_current_mouse_input_controller = @highlight_controller
+        @_current_mouse_input_controller = @stats_controller
 
         @state = "idle"
         @_min_dist = 10
 
-    create_cursor: () ->
+    getRoadBuild: () ->
+        return @road_build_controller
+
+    getRoadDestroy: () ->
+        # FIXME: Doesn't yet exist.
+        return @road_destroy_controller
+
+    getHighlight: () ->
+        return @highlight_controller
+
+    getStats: () ->
+        return @stats_controller
+
+    # deactivates all tools controllers.
+    deactivateTools: () ->
+        @road_build_controller.setActive(false)
+        @highlight_controller.setActive(false)
+        @stats_controller.setActive(false)
+
+
+    ###------------------------------------
+      Internal Helper Functions.
+    #--------------------------------------
+    ###
+
+
+    _create_cursor: () ->
 
         # We create a red circular overlay to show us where the mouse currently is, especially for debugging purposes.
 
@@ -44,7 +75,8 @@ class TSAG.I_Mouse_Main extends BDS.Interface_Controller_All
         scale.x = w
         scale.y = h
 
-        @scene.addOverlayVisual(mesh)
+        overlays = @scene.getOverlays()
+        overlays.addPermanentVisual(mesh)
         @pointer = mesh
 
     # Here are the input commands, they get piped to the current input controller.
@@ -62,9 +94,11 @@ class TSAG.I_Mouse_Main extends BDS.Interface_Controller_All
 
     mouse_move: (event) ->
 
+
         if @_current_mouse_input_controller != @highlight_controller and
            @_current_mouse_input_controller.isIdle()
-                @switchController(@highlight_controller)
+                #@switchController(@highlight_controller)
+                @switchController(@stats_controller)
 
         # Update the red pointer overlay on screen.
         pos = @pointer.position;

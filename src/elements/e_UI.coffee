@@ -1,66 +1,72 @@
 ###
-    SimUrban User Interface Object.
-    Written by Bryce on 4.6.2017
+    Sim Urban User Interface Object.
+    Written by Bryce on May.4.2017
     
-    Purpose: This class organizes the drawing and functionality for all of the static user interface elements,
-        such as windows, buttons, etc.
+    Purpose: This class provide general functions for the operation of UI's
+        - static visual generation.
+        - creation and deletion of buttons.
 
         This class also handles the text based display of information to the users.
 ###
 
 class TSAG.E_UI extends TSAG.E_Super
 
-    constructor: (@controller_ui) ->
+    constructor: (@scene) ->
 
         super()
 
+        # This stores the state of the UI_buttons.
+        @_bvh = new BDS.BVH2D([])
+        @_elements = new Set()
+    
+    # Create a button displayed at the given area: BDS.Polyline.
+    # visually represented by the given material,
+    # and which should call the given function when clicked.
+    createButton: (area, material, click_function) ->
+    
+        ###
+         * An element is an associative object of the following form:
+         * {click:    () -> what happens when the user clicks on this element.
+         *  polyline: A polyline representing the collision detection region for the object.
+         *  material: a pointer to the material object responsible for filling the actual
+         *  object on the screen.
+        ###
 
-        @createUIObjects()
+        # Start the material off in the resting state.
+        material.color = @_c_resting
 
+        element =   {click: click_function
+                    ,polyline:polyline
+                    ,material: material}
 
-    createUIObjects: () ->
+        polyline.setAssociatedData(element)
+        @_bvh.add(polyline)
+        @_elements.add(element)
 
-        view = @getVisual()
+        return element
 
-        @img_road_button = TSAG.style.newSprite("images/road.png", {x: 16, y:32, w:64, h:64})
-        view.add(@img_road_button)
+    # Remove the given button from the elements and bvh structures.
+    removeButton: (b) ->
+        a = @_elements.delete(b)
+        b = @_bvh.remove(b.polyline)
 
-        @img_stats_button = TSAG.style.newSprite("images/stats.png", {x: 16, y:96, w:64, h:64})
-        view.add(@img_stats_button)
+        # Return true if the button was removed from all data structures.
+        return a and b
 
-        # Center of rectangle aligned.
-        left_border = @createRectangle({fill: 0x808080, x: 0, y: 0, w:96, h:800, depth:-7})
-        view.add(left_border)
+    # Query function used to retrieve the UI element at the given point.
+    # Used as the primary interface to UI mouse controllers.
+    query_point: (pt) ->
+        return @_bvh.query_point(pt)
 
-        @img_cost_label = TSAG.style.newSprite("images/cost.png", {x: 0, y:704, w:96, h:96})
-        view.add(@img_cost_label)
+    ###
 
-        # center of rectangle aligned.
-        bottom_border = @createRectangle({fill: 0x808080, x: 0, y: 800 - 16, w:1200, h:16, depth:-6})
-        view.add(bottom_border)
+    Internal Helper functions.
 
-        cost_display = @createRectangle({fill: 0xffffff, x: 64, y: 800 - 16 - 50, w:256, h:50, depth:-5})
-        view.add(cost_display)
-
-        info_message_display = @createRectangle({fill: 0x0000ff, x: 64 + 256, y: 800 - 66, w:520, h:66, depth:-5})
-        view.add(info_message_display)
-
-        img_happy_label = TSAG.style.newSprite("images/happy_face.png", {x: 830, y:800 - 96, w:96, h:96})
-        view.add(img_happy_label)
-
-        img_sad_label = TSAG.style.newSprite("images/sad_face.png", {x: 1200 - 96, y:800 - 96, w:96, h:96})
-        view.add(img_sad_label)
-
-        happiness_display = @createRectangle({fill: 0xb0efcd, x: 900, y: 800 - 66, w:154, h:50, depth:-5})
-        view.add(happiness_display)
-
-        sadness_display = @createRectangle({fill: 0xeec3c3, x: 1058, y: 800 - 66, w:60, h:50, depth:-5})
-        view.add(sadness_display)
-
+    ###
 
     # {fill:, x:, y:, w:, h:, depth}
     # x and y of top left corner.
-    createRectangle: (params) ->
+    _createRectangle: (params) ->
         rect = TSAG.style.unit_meshes.newSquare({color: new THREE.Color(params.fill)})
         rect.scale.x = params.w
         rect.scale.y = params.h
@@ -69,6 +75,24 @@ class TSAG.E_UI extends TSAG.E_Super
         rect.position.z = params.depth
 
         return rect
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         ###
         mesh.scale.x = 200

@@ -12,8 +12,8 @@ class TSAG.Mesh_Basic extends THREE.Mesh
     constructor: (area_geometry, @outline_geometry) ->
 
         # Affix the geometry with a material.
-        material = TSAG.style.m_default_fill.clone()
-        super(area_geometry, material);
+        @fill_material = TSAG.style.m_default_fill.clone()
+        super(area_geometry, @fill_material);
 
         # Black Line color.
         @line_material = TSAG.style.m_default_line.clone()
@@ -37,5 +37,11 @@ class TSAG.Mesh_Basic extends THREE.Mesh
                 debugger
 
             mesh.material.color = params.color;
+
+        output.setFillColor = (c) ->
+            @children[0].material.color = c
+
+        output.revertFillColor = () ->
+            @children[0].material.color = TSAG.style.m_default_fill.color.clone()
 
         return output;

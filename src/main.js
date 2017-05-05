@@ -70,6 +70,9 @@ function init_input()
     // Initialize the root of the input specification tree.
     input = new TSAG.I_All_Main(root_e_scene, root_camera);
 
+    // Provide the scene with a hook into the io tree.
+    root_e_scene.setInputRoot(input);
+
     window.addEventListener( 'resize', onWindowResize, false);
 
     //window.addEventListener("keypress", onKeyPress);

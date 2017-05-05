@@ -21,7 +21,7 @@ TSAG.init_style = () ->
         user_input_min_move: 10,
 
         # Materials.
-        m_default_fill: new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} ),
+        m_default_fill: new THREE.MeshBasicMaterial( {color: 0xdddddd, side: THREE.DoubleSide} ),
         m_default_line: new THREE.LineBasicMaterial( {color: 0x000000, linewidth:5}),
 
         # Colors.
@@ -49,6 +49,7 @@ TSAG.init_style = () ->
         highlight: new THREE.Color(0x0000ff),
         error:     new THREE.Color(0xff0000),
         action:    new THREE.Color(0x72E261),
+        c_normal:  new THREE.Color(0xdddddd),
     }
 
     # Unit Geometries for rendering.
@@ -112,57 +113,131 @@ TSAG.init_style = () ->
 
         return container
 
-    TSAG.style.fontLoader = new THREE.FontLoader();
-    TSAG.style.font = TSAG.style.fontLoader.load('fonts/Raleway_Regular.typeface.json')
 
-    # parames: {font: (FontLoader), message: String, x:, y:, height:}
+    TSAG.style.fontLoader = new THREE.FontLoader();
+    TSAG.style.textMeshQueue = []
+
+    # Asynchronously load the font into the font loader.
+    TSAG.style.fontLoader.load('fonts/Raleway_Regular.typeface.json',
+                               (font) ->
+
+                                    TSAG.style.font = font
+
+                                    for params in TSAG.style.textMeshQueue
+                                        TSAG.style.newText(params)
+                               )
+
+    
+
+    # params: {font: (FontLoader), message: String, height:, out:,
+    #           fill_color:0xrrggbb, outline_color:0xff}
+    # FIXME: Text is assumed to be left aligned, but I may allow for center alignment eventually.
+    # It is expected that the user will position the containing object externally,
+    # so that the internal text shapes may be replaced.
+    # Creates a new object that contins an outline form and a fill form.
+    # adds the object to the out: threejs Object, which will be the container.
+    # filled objects are created if a fill is provide.
+    # outlined objects are created if an outline is provided.
     TSAG.style.newText = (params) ->
 
-                    ###
-                    var xMid, text;
-                    var textShape = new THREE.BufferGeometry();
-                    var color = 0x006699;
-                    var matDark = new THREE.LineBasicMaterial( {
-                        color: color,
-                        side: THREE.DoubleSide
-                    } );
-                    var matLite = new THREE.MeshBasicMaterial( {
-                        color: color,
-                        transparent: true,
-                        opacity: 0.4,
-                        side: THREE.DoubleSide
-                    } );
-                    var message = "   Three.js\nSimple text.";
-                    var shapes = font.generateShapes( message, 100, 2 );
-                    var geometry = new THREE.ShapeGeometry( shapes );
-                    geometry.computeBoundingBox();
-                    xMid = - 0.5 * ( geometry.boundingBox.max.x - geometry.boundingBox.min.x );
-                    geometry.translate( xMid, 0, 0 );
-                    // make shape ( N.B. edge view not visible )
-                    textShape.fromGeometry( geometry );
-                    text = new THREE.Mesh( textShape, matLite );
-                    text.position.z = - 150;
-                    scene.add( text );
-                    // make line shape ( N.B. edge view remains visible )
-                        var holeShapes = [];
-                    for ( var i = 0; i < shapes.length; i ++ ) {
-                        var shape = shapes[ i ];
-                        if ( shape.holes && shape.holes.length > 0 ) {
-                            for ( var j = 0; j < shape.holes.length; j ++ ) {
-                                var hole = shape.holes[ j ];
-                                holeShapes.push( hole );
-                            }
-                        }
-                    }
-                    shapes.push.apply( shapes, holeShapes );
-                    var lineText = new THREE.Object3D();
-                    for ( var i = 0; i < shapes.length; i ++ ) {
-                        var shape = shapes[ i ];
-                        var lineGeometry = shape.createPointsGeometry();
-                        lineGeometry.translate( xMid, 0, 0 );
-                        var lineMesh = new THREE.Line( lineGeometry, matDark );
-                        lineText.add( lineMesh );
-                    }
-                    scene.add( lineText );
-                } ); //end load function
-                ###
+        # If the font is not loaded yet,
+        # then we put the request in a queue for processing later,
+        # once the font has loaded.
+        if not TSAG.style.font
+            TSAG.style.textMeshQueue.push(params)
+            return
+
+        # Compute shared variables once.
+        if params.fill_color or params.outline_color
+            message = params.message
+
+            # 2 is the level of subdivision for the paths that are created.
+            shapes  = TSAG.style.font.generateShapes( message, params.height, 2 )
+
+            geometry = new THREE.ShapeGeometry( shapes )
+            geometry.computeBoundingBox()
+
+        if params.fill_color
+            TSAG.style.newFillText(params, shapes, geometry)
+
+        if params.outline_color
+            TSAG.style.newOutlineText(params, shapes, geometry)
+
+        params.out.position.z = + .1
+
+
+    TSAG.style.newFillText = (params, shapes, geometry) ->
+
+        output = params.out #new THREE.Object3D()
+
+        textShape = new THREE.BufferGeometry()
+        
+        color_fill = params.fill_color
+
+        material_fill = new THREE.LineBasicMaterial( {
+            color: color_fill,
+            side: THREE.DoubleSide
+        } )
+
+        # Perform Translations.
+        xMid = -0.5 * ( geometry.boundingBox.max.x - geometry.boundingBox.min.x )
+        geometry.scale(1, -1, 1)
+        tx = 0
+        if params.align_center
+            tx = xMid
+        geometry.translate( tx, params.height, 0)
+
+        # make shape
+        textShape.fromGeometry( geometry )
+        text = new THREE.Mesh(textShape, material_fill)
+        output.add( text )
+
+    TSAG.style.newOutlineText = (params, shapes, geometry) ->
+
+        output = params.out #new THREE.Object3D()
+
+        color_outline = params.outline_color
+
+        material_outline = new THREE.MeshBasicMaterial( {
+            color: color_outline,
+            ###
+            transparent: true,
+            opacity: 1.0,
+            FIXME: Specify Opacity settings.
+            ###
+            side: THREE.DoubleSide
+        } )
+
+        # -- Outlines.
+
+        # Make the letters with holes.
+        holeShapes = []
+        for i in [0...shapes.length] by 1
+            shape = shapes[i]
+            if shape.holes and shape.holes.length > 0
+                for j in [0...shape.holes.length] by 1 #( var j = 0; j < shape.holes.length; j ++ ) {
+                    hole = shape.holes[j]
+                    holeShapes.push(hole)
+
+        shapes.push.apply( shapes, holeShapes )
+        lineText = new THREE.Object3D()
+        params.out.position.z = +.1
+
+        
+        # translation amount.
+        tx = 0
+        if params.align_center
+            tx = -0.5 * ( geometry.boundingBox.max.x - geometry.boundingBox.min.x )
+
+        #lineText.scale.y = -1
+        for i in [0...shapes.length] by 1 #( var i = 0; i < shapes.length; i ++ ) {
+            shape = shapes[i]
+            lineGeometry = shape.createPointsGeometry()
+            lineGeometry.scale(1, -1, 1)
+            lineGeometry.translate(tx, params.height, 0 )
+            lineMesh = new THREE.Line( lineGeometry, material_outline )
+            lineText.add( lineMesh )
+        
+        output.add( lineText )
+
+        return

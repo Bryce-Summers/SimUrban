@@ -19,7 +19,7 @@ class TSAG.Mesh_Unit_Circle extends TSAG.Mesh_Basic
         theata0  = 0
         theata1  = Math.PI*2
         #geometry = new THREE.CircleBufferGeometry(.5, 25, theata0, theata1);
-        geometry = new THREE.CircleGeometry(.5, 25, theata0, theata1);
+        geometry = new THREE.CircleGeometry(radius, 25, theata0, theata1);
 
         # FIXME: Construct a circle outline.
 
