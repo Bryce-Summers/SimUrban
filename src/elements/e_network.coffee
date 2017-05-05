@@ -43,6 +43,45 @@ class TSAG.E_Network extends TSAG.E_Super
         #@_intersections = []
         @_roads = new Set()
 
+
+        view = @getVisual()
+
+        # -- Creat all of the areas.
+        @_areas = []
+
+        # bronx.
+        pline = BDS.Polyline.newCircle(312, 800-648, 58)
+        area = new TSAG.E_Area(pline, "bronx", "images/stats_overlays/overlay_bronx.png")
+        view.add(area.getVisual())
+        @_areas.push(area)
+
+        # Queens.
+        pline = BDS.Polyline.newCircle(1045, 800-656, 58)
+        area = new TSAG.E_Area(pline, "queens", "images/stats_overlays/overlay_queens.png")
+        view.add(area.getVisual())
+        @_areas.push(area)
+
+        # Manhattan.
+        pline = BDS.Polyline.newCircle(223, 800-205, 58)
+        area = new TSAG.E_Area(pline, "manhattan", "images/stats_overlays/overlay_manhattan.png")
+        view.add(area.getVisual())
+        @_areas.push(area)
+
+        # Brooklyn.
+        pline = BDS.Polyline.newCircle(895, 800-210, 58)
+        area = new TSAG.E_Area(pline, "booklyn", "images/stats_overlays/overlay_brooklyn.png")
+        view.add(area.getVisual())
+        @_areas.push(area)
+
+    # Returns the area found at the given point,
+    # null otherwise.
+    query_area_elements_pt: (pt) ->
+
+        for ae in @_areas
+            if ae.containsPoint(pt)
+                return ae
+        return null
+
     # Add a road to the explict list of roads.
     # I may use this for enumerating streets by name or something like that...
     addRoad: (road) ->

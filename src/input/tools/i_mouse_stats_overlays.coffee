@@ -1,9 +1,7 @@
 #
-# Main Mouse Input Controller.
+# Overlayed Statistics Controller.
 #
-# Refactored by Bryce Summers on 12 - 18 - 2016.
-#
-# This is the top level mouse input controller that receives all input related to mouse input.
+# Written by Bryce Summers on May.4.2017
 #
 
 #
@@ -13,15 +11,18 @@
 # Abstracted on 12 - 18 - 2016.
 #
 
-class TSAG.I_Mouse_Highlight
+class TSAG.I_Mouse_Stats_Overlays extends TSAG.I_Tool_Controller
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js
-    constructor: (@e_scene, @camera) ->
+    constructor: (@scene, @camera) ->
 
-        #@state = "idle"
-        @network = @e_scene.getNetwork()
+        super(@scene, @camera)
 
+        # We will need the network to activate stat's overlays.
+        @overlays = @scene.getOverlays()
+        @view = @overlays.getVisual()
+        @network  = @scene.getNetwork()
         @previous_elements = []
 
     # The Highlight controller is always idle.
@@ -32,7 +33,7 @@ class TSAG.I_Mouse_Highlight
     finish: () ->
         while @previous_elements.length > 0
             prev_elem = @previous_elements.pop()
-            prev_elem.revertFillColor()
+            prev_elem.hide_stats(@view)
 
     mouse_down: (event) ->
 
@@ -48,10 +49,8 @@ class TSAG.I_Mouse_Highlight
 
         @finish()
 
-        elems = @network.query_elements_pt(event.x, event.y)
+        elem = @network.query_area_elements_pt(new BDS.Point(event.x, event.y))
 
-        for elem in elems
-            if elem instanceof TSAG.E_Road
-                road = elem
-                road.setFillColor(TSAG.style.highlight)
-                @previous_elements.push(road)
+        if elem != null
+            elem.display_stats(@view)
+            @previous_elements.push(elem)

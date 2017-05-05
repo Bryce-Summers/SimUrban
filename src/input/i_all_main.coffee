@@ -22,3 +22,5 @@ class TSAG.I_All_Main extends BDS.Controller_Group
         @_time_input = new TSAG.I_Time_Main(@scene, @camera)
         @add_time_input_controller(@_time_input)
         
+    getMouseController: () ->
+        return @_mouse_input
