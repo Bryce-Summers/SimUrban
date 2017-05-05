@@ -15,11 +15,13 @@ States:
 
 ###
 
-class TSAG.I_Mouse_Build_Road
+class TSAG.I_Mouse_Build_Road extends TSAG.I_Tool_Controller
 
     # Input: THREE.js Scene. Used to add GUI elements to the screen and modify the persistent state.
     # THREE.js
     constructor: (@e_scene, @camera) ->
+
+        super(@e_scene, @camera)
 
         @state = "idle"
         @_mousePrevious = {x:0, y:0}

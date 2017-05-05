@@ -35,10 +35,10 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         @controller_demolish_road.setActive(false)
         ###
 
-        @controller_highlight = mouse_controller.getHighlight()
+        @controller_highlight = @mouse_controller.getHighlight()
         @controller_highlight.setActive(false)
 
-        @controller_stats = mouse_controller.getStats()
+        @controller_stats = @mouse_controller.getStats()
         @controller_stats.setActive(false)
 
         # -- Tool Button Meshes for visual display.
@@ -91,9 +91,9 @@ class TSAG.E_UI_Game extends TSAG.E_UI
             @controller_highlight.setActive(true)
 
 
-        @createButton(pline_road_button,      @img_road_button.material,      func_build_road)
-        @createButton(pline_stats_button,     @img_stats_button.material,     func_stats)
-        @createButton(pline_highlight_button, @img_highlight_button.material, func_highlight)
+        @createButton(pline_road_button,      @img_road_button.children[0].material,      func_build_road)
+        @createButton(pline_stats_button,     @img_stats_button.children[0].material,     func_stats)
+        @createButton(pline_highlight_button, @img_highlight_button.children[0].material, func_highlight)
 
 
     createStaticObjects: () ->

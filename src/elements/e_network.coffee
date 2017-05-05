@@ -79,9 +79,7 @@ class TSAG.E_Network extends TSAG.E_Super
 
         for ae in @_areas
             if ae.containsPoint(pt)
-                console.log(ae)
                 return ae
-        console.log("none")
         return null
 
     # Add a road to the explict list of roads.

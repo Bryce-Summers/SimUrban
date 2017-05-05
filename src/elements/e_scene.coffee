@@ -40,6 +40,7 @@ class TSAG.E_Scene extends TSAG.E_Super
 
         # We defer the initialization of the UI until after
         # we have stable pointers to io controllers.
+        view = @getVisual()
         @_ui = new TSAG.E_UI_Game(@)
         view.add(@_ui.getVisual())
 

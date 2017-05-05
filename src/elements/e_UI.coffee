@@ -18,6 +18,9 @@ class TSAG.E_UI extends TSAG.E_Super
         # This stores the state of the UI_buttons.
         @_bvh = new BDS.BVH2D([])
         @_elements = new Set()
+
+        # FIXME: Get this from teh UI controller.
+        @_c_resting       = new THREE.Color(0xe6dada)
     
     # Create a button displayed at the given area: BDS.Polyline.
     # visually represented by the given material,
@@ -36,11 +39,11 @@ class TSAG.E_UI extends TSAG.E_Super
         material.color = @_c_resting
 
         element =   {click: click_function
-                    ,polyline:polyline
+                    ,polyline:area
                     ,material: material}
 
-        polyline.setAssociatedData(element)
-        @_bvh.add(polyline)
+        element.polyline.setAssociatedData(element)
+        @_bvh.add(element.polyline)
         @_elements.add(element)
 
         return element
