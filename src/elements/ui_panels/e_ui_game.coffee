@@ -16,7 +16,9 @@ class TSAG.E_UI_Game extends TSAG.E_UI
 
         super(@scene)
 
-        @hapiness = .70
+        @happy_trips = 0
+        @total_trips = 0
+
         @cost = 0
 
         @createButtons()
@@ -30,16 +32,18 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         @mouse_controller = @scene.get_io_mouse()
 
         # -- Tools Controllers extracted from input tree.
+        # We can specify the gameplay initial conditions here,
+        # such as starting with the bbuild road controller active.
         
         @controller_build_road = @mouse_controller.getRoadBuild()
-        @controller_build_road.setActive(false)
+        @controller_build_road.setActive(true)
         ###
         @controller_demolish_road = mouse_controller.getRoadDestroy()
         @controller_demolish_road.setActive(false)
         ###
 
         @controller_highlight = @mouse_controller.getHighlight()
-        @controller_highlight.setActive(false)
+        @controller_highlight.setActive(true)
 
         @controller_stats = @mouse_controller.getStats()
         @controller_stats.setActive(false)
@@ -85,6 +89,7 @@ class TSAG.E_UI_Game extends TSAG.E_UI
             () ->
                 self.mouse_controller.deactivateTools()
                 self.controller_build_road.setActive(true)
+                self.controller_highlight.setActive(true)
                 return
 
         func_stats = (self) ->
@@ -98,7 +103,6 @@ class TSAG.E_UI_Game extends TSAG.E_UI
                 self.mouse_controller.deactivateTools()
                 self.controller_highlight.setActive(true)
                 return
-
 
         @createButton(pline_road_button,      @img_road_button.children[0].material,      func_build_road(@))
         @createButton(pline_stats_button,     @img_stats_button.children[0].material,     func_stats(@))
@@ -118,11 +122,18 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         img_happy_label = TSAG.style.newSprite("images/happy_face.png", dim_happy)
         view.add(img_happy_label)
 
-        hapiness_display = @_createRectangle({fill: 0xb0efcd, x: 64, y: 800 - 16 - 50, w:200, h:50, depth:-5})
-        view.add(hapiness_display)
+        @hapiness_width = 256
+        @hapiness_display = @_createRectangle({fill: 0xb0efcd, x: 64, y: 800 - 16 - 50, w:5, h:50, depth:-5})
+        view.add(@hapiness_display)
 
-        sadness_display = @_createRectangle({fill: 0xeec3c3, x: 64 + 200, y: 800 - 66, w:56, h:50, depth:-5})
-        view.add(sadness_display)
+        @sadness_display = @_createRectangle({fill: 0xeec3c3, x: 64+5, y: 800 - 66, w:@hapiness_width - 5, h:50, depth:-5})
+        view.add(@sadness_display)
+
+        @happiness_text = new THREE.Object3D()
+        @happiness_text.position.x = 64
+        @happiness_text.position.y = 800 - 66
+        view.add(@happiness_text)
+
 
         # center of rectangle aligned.
         bottom_border = @_createRectangle({fill: 0x808080, x: 0, y: 800 - 16, w:1200, h:16, depth:-6})
@@ -145,10 +156,10 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         cost_display = @_createRectangle({fill: 0xffffff, x: 900, y: 800 - 66, w:1200 - 900, h:50, depth:-5})
         view.add(cost_display)
 
-        @cost_message_text = new THREE.Object3D()
-        @cost_message_text.position.x = 930
-        @cost_message_text.position.y = 800 - 66 + 10
-        view.add(@cost_message_text)
+        @cost_text = new THREE.Object3D()
+        @cost_text.position.x = 930
+        @cost_text.position.y = 800 - 66 + 10
+        view.add(@cost_text)
 
         @displayCost()
 
@@ -193,13 +204,42 @@ class TSAG.E_UI_Game extends TSAG.E_UI
     changeMessageText: (str) ->
         @changeText(@info_message_text, str)
 
+    # Statistics displays.
     addCost: (amount) ->
         @cost += amount
         @displayCost()
 
     displayCost: () ->
-        @changeText(@cost_message_text, "$" + Math.floor(@cost/100) + " million")
+        @changeText(@cost_text, "$" + Math.floor(@cost/100) + " million")
 
+    addTrip: (car) ->
+        
+        console.log("Time, distance")
+        console.log(car.getTimeTravelled())
+        console.log(car.getDistanceTravelled())
+
+        #@total_trips += 1
+        #if car.getTimeTravelled() < 1000
+        #@happy_trips += 1
+
+        # HACK: For now we will just show the hapiness going up.
+        @total_trips = 1
+        @happy_trips = .9*@happy_trips + .1*1
+
+        @displayHapiness(@happy_trips/@total_trips)
+
+    displayHapiness: (percentage) ->
+        @hapiness_width = 256
+
+        w1 = @hapiness_width*percentage
+        w2 = @hapiness_width - w1
+
+        @hapiness_display.scale.x = w1
+        @hapiness_display.position.x = 64 + w1/2
+
+        @sadness_display.position.x = 64 + w1 + w2/2
+        @sadness_display.scale.x    = w2
+        
 
     # THREE.Object3D(), String
     changeText: (text_obj, str) ->

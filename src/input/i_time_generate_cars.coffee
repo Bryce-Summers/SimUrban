@@ -51,7 +51,7 @@ class TSAG.I_Time_Generate_Cars extends BDS.Interface_Controller_Time
                     continue
 
 
-                outputs = lane.moveCars()
+                outputs = lane.moveCars(dt)
 
                 # We are done if the lane did not emit any cars.
                 if outputs.length == 0
@@ -62,6 +62,8 @@ class TSAG.I_Time_Generate_Cars extends BDS.Interface_Controller_Time
                 if lane.deadEnd()
                     for car in outputs
                         network.removeVisual(car.getVisual())
+                        # Log this car's trip in the UI's statistics functions.
+                        @scene.getUI().addTrip(car)
 
                 # Instead of destroying these cars, I would like to move them on to the next lane.
                 # To do this

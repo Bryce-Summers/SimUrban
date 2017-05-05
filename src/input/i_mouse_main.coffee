@@ -30,7 +30,6 @@ class TSAG.I_Mouse_Main extends BDS.Controller_Group
         @ui_controller = new TSAG.UI_Controller(@scene, @camera)
         @add_mouse_input_controller(@ui_controller)
 
-
         @state = "idle"
 
     getRoadBuild: () ->
@@ -48,6 +47,7 @@ class TSAG.I_Mouse_Main extends BDS.Controller_Group
 
     # deactivates all tools controllers.
     deactivateTools: () ->
+
         @road_build_controller.setActive(false)
         @road_build_controller.cancel()
         @road_build_controller.finish()

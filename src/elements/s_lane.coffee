@@ -43,7 +43,7 @@ class TSAG.S_Lane
 
     # Transports cars along this lane.
     # Lanes move cars, cars perform navigation that will determine their behavior at intersections.
-    moveCars: () ->
+    moveCars: (dt) ->
 
         destroyed_cars = []
 
@@ -54,9 +54,11 @@ class TSAG.S_Lane
 
             # For now, we just want to show cars moving.
             # If they move to the end of the lane, then we simply destroy them.
-            if not @_moveCar(car, 1)
+            if not @_moveCar(car, 1)# fixme, use dt
                 iter.remove()
                 destroyed_cars.push(car)
+            else
+                car.addTime(dt)
 
         return destroyed_cars
 
@@ -70,6 +72,7 @@ class TSAG.S_Lane
 
         index = car.segment_index
         car.distance += change_in_distance
+        car.addDistance(Math.abs(change_in_distance))
 
         # Search forward for the appropriate segment.
         loop
