@@ -272,3 +272,7 @@ class TSAG.S_Curve
     # BDS.Point -> THREE.Vector3
     point_to_vec: (pt) ->
         return new THREE.Vector3(pt.x, pt.y)
+
+    # Returns the total length of this curve.
+    length: () ->
+        return @_total_length

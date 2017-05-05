@@ -906,6 +906,10 @@ TSAG = {};
       return [null, null];
     };
 
+    E_Road.prototype.getCost = function() {
+      return this._main_curve.length();
+    };
+
     return E_Road;
 
   })(TSAG.E_Super);
@@ -1367,12 +1371,14 @@ Parameterizes car movement:
       I_Mouse_Main.__super__.constructor.call(this);
       this._create_cursor();
       this.road_build_controller = new TSAG.I_Mouse_Build_Road(this.scene, this.camera);
+      this.add_mouse_input_controller(this.road_build_controller);
       this.highlight_controller = new TSAG.I_Mouse_Highlight(this.scene, this.camera);
+      this.add_mouse_input_controller(this.highlight_controller);
       this.stats_controller = new TSAG.I_Mouse_Stats_Overlays(this.scene, this.camera);
+      this.add_mouse_input_controller(this.stats_controller);
       this.ui_controller = new TSAG.UI_Controller(this.scene, this.camera);
-      this._current_mouse_input_controller = this.stats_controller;
+      this.add_mouse_input_controller(this.ui_controller);
       this.state = "idle";
-      this._min_dist = 10;
     }
 
     I_Mouse_Main.prototype.getRoadBuild = function() {
@@ -1393,8 +1399,12 @@ Parameterizes car movement:
 
     I_Mouse_Main.prototype.deactivateTools = function() {
       this.road_build_controller.setActive(false);
+      this.road_build_controller.cancel();
+      this.road_build_controller.finish();
       this.highlight_controller.setActive(false);
-      return this.stats_controller.setActive(false);
+      this.highlight_controller.finish();
+      this.stats_controller.setActive(false);
+      return this.stats_controller.finish();
     };
 
 
@@ -1422,36 +1432,17 @@ Parameterizes car movement:
       return this.pointer = mesh;
     };
 
-    I_Mouse_Main.prototype.mouse_down = function(event) {
-      if (this._current_mouse_input_controller !== this.road_build_controller && this._current_mouse_input_controller.isIdle()) {
-        this.switchController(this.road_build_controller);
-      }
-      return this._current_mouse_input_controller.mouse_down(event);
-    };
-
-    I_Mouse_Main.prototype.mouse_up = function(event) {
-      return this._current_mouse_input_controller.mouse_up(event);
-    };
-
     I_Mouse_Main.prototype.mouse_move = function(event) {
       var pos;
-      if (this._current_mouse_input_controller !== this.highlight_controller && this._current_mouse_input_controller.isIdle()) {
-        this.switchController(this.stats_controller);
-      }
+      I_Mouse_Main.__super__.mouse_move.call(this, event);
       pos = this.pointer.position;
       pos.x = event.x;
-      pos.y = event.y;
-      return this._current_mouse_input_controller.mouse_move(event);
-    };
-
-    I_Mouse_Main.prototype.switchController = function(controller) {
-      this._current_mouse_input_controller.finish();
-      return this._current_mouse_input_controller = controller;
+      return pos.y = event.y;
     };
 
     return I_Mouse_Main;
 
-  })(BDS.Interface_Controller_All);
+  })(BDS.Controller_Group);
 
 }).call(this);
 
@@ -2476,6 +2467,10 @@ Notes:
       return new THREE.Vector3(pt.x, pt.y);
     };
 
+    S_Curve.prototype.length = function() {
+      return this._total_length;
+    };
+
     return S_Curve;
 
   })();
@@ -3184,6 +3179,8 @@ Move to its own file on 3 - 7 - 2017.
     function E_UI_Game(scene) {
       this.scene = scene;
       E_UI_Game.__super__.constructor.call(this, this.scene);
+      this.hapiness = .70;
+      this.cost = 0;
       this.createButtons();
       this.createStaticObjects();
       this.changeMessageText("Default Message");
@@ -3226,8 +3223,8 @@ Move to its own file on 3 - 7 - 2017.
         w: 64,
         h: 64
       };
-      this.img_highlight_button = TSAG.style.newSprite("images/stats.png", dim_stats_button);
-      view.add(this.img_stats_button);
+      this.img_highlight_button = TSAG.style.newSprite("images/highlight.png", dim_highlight_button);
+      view.add(this.img_highlight_button);
       pline_road_button = BDS.Polyline.newRectangle(dim_road_button);
       pline_stats_button = BDS.Polyline.newRectangle(dim_stats_button);
       pline_highlight_button = BDS.Polyline.newRectangle(dim_highlight_button);
@@ -3246,25 +3243,31 @@ Move to its own file on 3 - 7 - 2017.
           mode = TSAG.I_Mouse_Build_Road.mode_artery
           @controller_build_road.setMode(mode)
        */
-      func_build_road = function() {
-        this.mouse_controller.deactivateTools();
-        return this.controller_build_road.setActive(true);
+      func_build_road = function(self) {
+        return function() {
+          self.mouse_controller.deactivateTools();
+          self.controller_build_road.setActive(true);
+        };
       };
-      func_stats = function() {
-        this.mouse_controller.deactivateTools();
-        return this.controller_build_road.setActive(true);
+      func_stats = function(self) {
+        return function() {
+          self.mouse_controller.deactivateTools();
+          self.controller_stats.setActive(true);
+        };
       };
-      func_highlight = function() {
-        this.mouse_controller.deactivateTools();
-        return this.controller_highlight.setActive(true);
+      func_highlight = function(self) {
+        return function() {
+          self.mouse_controller.deactivateTools();
+          self.controller_highlight.setActive(true);
+        };
       };
-      this.createButton(pline_road_button, this.img_road_button.children[0].material, func_build_road);
-      this.createButton(pline_stats_button, this.img_stats_button.children[0].material, func_stats);
-      return this.createButton(pline_highlight_button, this.img_highlight_button.children[0].material, func_highlight);
+      this.createButton(pline_road_button, this.img_road_button.children[0].material, func_build_road(this));
+      this.createButton(pline_stats_button, this.img_stats_button.children[0].material, func_stats(this));
+      return this.createButton(pline_highlight_button, this.img_highlight_button.children[0].material, func_highlight(this));
     };
 
     E_UI_Game.prototype.createStaticObjects = function() {
-      var bottom_border, cost_display, happiness_display, img_happy_label, img_sad_label, left_border, sadness_display, view;
+      var bottom_border, cost_display, dim_cost, dim_happy, hapiness_display, img_happy_label, left_border, sadness_display, view;
       view = this.getVisual();
       left_border = this._createRectangle({
         fill: 0x808080,
@@ -3275,13 +3278,32 @@ Move to its own file on 3 - 7 - 2017.
         depth: -7
       });
       view.add(left_border);
-      this.img_cost_label = TSAG.style.newSprite("images/cost.png", {
+      dim_happy = {
         x: 0,
         y: 704,
         w: 96,
         h: 96
+      };
+      img_happy_label = TSAG.style.newSprite("images/happy_face.png", dim_happy);
+      view.add(img_happy_label);
+      hapiness_display = this._createRectangle({
+        fill: 0xb0efcd,
+        x: 64,
+        y: 800 - 16 - 50,
+        w: 200,
+        h: 50,
+        depth: -5
       });
-      view.add(this.img_cost_label);
+      view.add(hapiness_display);
+      sadness_display = this._createRectangle({
+        fill: 0xeec3c3,
+        x: 64 + 200,
+        y: 800 - 66,
+        w: 56,
+        h: 50,
+        depth: -5
+      });
+      view.add(sadness_display);
       bottom_border = this._createRectangle({
         fill: 0x808080,
         x: 0,
@@ -3291,15 +3313,6 @@ Move to its own file on 3 - 7 - 2017.
         depth: -6
       });
       view.add(bottom_border);
-      cost_display = this._createRectangle({
-        fill: 0xffffff,
-        x: 64,
-        y: 800 - 16 - 50,
-        w: 256,
-        h: 50,
-        depth: -5
-      });
-      view.add(cost_display);
       this.info_message_display = this._createRectangle({
         fill: 0x0000ff,
         x: 64 + 256,
@@ -3313,38 +3326,33 @@ Move to its own file on 3 - 7 - 2017.
       this.info_message_text.position.x = 335;
       this.info_message_text.position.y = 800 - 60;
       view.add(this.info_message_text);
-      img_happy_label = TSAG.style.newSprite("images/happy_face.png", {
+      dim_cost = {
         x: 830,
         y: 800 - 96,
         w: 96,
         h: 96
-      });
-      view.add(img_happy_label);
-      img_sad_label = TSAG.style.newSprite("images/sad_face.png", {
-        x: 1200 - 96,
-        y: 800 - 96,
-        w: 96,
-        h: 96
-      });
-      view.add(img_sad_label);
-      happiness_display = this._createRectangle({
-        fill: 0xb0efcd,
+      };
+      this.img_cost_label = TSAG.style.newSprite("images/cost.png", dim_cost);
+      view.add(this.img_cost_label);
+      cost_display = this._createRectangle({
+        fill: 0xffffff,
         x: 900,
         y: 800 - 66,
-        w: 154,
+        w: 1200 - 900,
         h: 50,
         depth: -5
       });
-      view.add(happiness_display);
-      sadness_display = this._createRectangle({
-        fill: 0xeec3c3,
-        x: 1058,
-        y: 800 - 66,
-        w: 60,
-        h: 50,
-        depth: -5
-      });
-      return view.add(sadness_display);
+      view.add(cost_display);
+      this.cost_message_text = new THREE.Object3D();
+      this.cost_message_text.position.x = 930;
+      this.cost_message_text.position.y = 800 - 66 + 10;
+      view.add(this.cost_message_text);
+      return this.displayCost();
+
+      /*
+      img_sad_label = TSAG.style.newSprite("images/sad_face.png", {x: 1200 - 96, y:800 - 96, w:96, h:96})
+      view.add(img_sad_label)
+       */
     };
 
 
@@ -3375,13 +3383,26 @@ Move to its own file on 3 - 7 - 2017.
     };
 
     E_UI_Game.prototype.changeMessageText = function(str) {
-      this.info_message_text.children = [];
+      return this.changeText(this.info_message_text, str);
+    };
+
+    E_UI_Game.prototype.addCost = function(amount) {
+      this.cost += amount;
+      return this.displayCost();
+    };
+
+    E_UI_Game.prototype.displayCost = function() {
+      return this.changeText(this.cost_message_text, "$" + Math.floor(this.cost / 100) + " million");
+    };
+
+    E_UI_Game.prototype.changeText = function(text_obj, str) {
+      text_obj.children = [];
       return TSAG.style.newText({
         font: TSAG.style.font,
         height: 16,
         fill_color: 0xff000000,
         message: str,
-        out: this.info_message_text
+        out: text_obj
       });
     };
 
@@ -3637,7 +3658,7 @@ States:
         type: "info"
       });
       if (this.isects.length < 2) {
-        this._cancel();
+        this.cancel();
         return;
       }
       this.road.removeLastPoint();
@@ -3649,6 +3670,7 @@ States:
       last_isect = this.isects[this.isects.length - 1];
       this.start_or_end_point(last_isect);
       this.network.removeVisual(this.road.getVisual());
+      this.e_scene.getUI().addCost(this.road.getCost());
       this.road = null;
 
       /*
@@ -3754,7 +3776,7 @@ States:
       this.isects_last_segment = [];
     };
 
-    I_Mouse_Build_Road.prototype._cancel = function() {
+    I_Mouse_Build_Road.prototype.cancel = function() {
       var isect_obj, j, k, len1, len2, ref, ref1;
       if (this.road) {
         this.network.removeVisual(this.road.getVisual());

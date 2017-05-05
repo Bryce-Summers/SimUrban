@@ -351,7 +351,7 @@ class TSAG.I_Mouse_Build_Road extends TSAG.I_Tool_Controller
 
         # Roads must span at least 2 vertices.
         if @isects.length < 2
-            @_cancel()
+            @cancel()
             return
 
         # Indicate to the user that they can click now to end the interaction.
@@ -377,6 +377,7 @@ class TSAG.I_Mouse_Build_Road extends TSAG.I_Tool_Controller
 
         # 1. Delete the Temporary Road visual.
         @network.removeVisual(@road.getVisual())
+        @e_scene.getUI().addCost(@road.getCost())
         @road = null # We no longer need the temporary road.
 
         # 2. Delete the non-permanant Intersection visuals.
@@ -515,7 +516,7 @@ class TSAG.I_Mouse_Build_Road extends TSAG.I_Tool_Controller
         return
 
     # Cancels the road construction, deletes all allocated elements.
-    _cancel: () ->
+    cancel: () ->
         if @road
             @network.removeVisual(@road.getVisual())
 

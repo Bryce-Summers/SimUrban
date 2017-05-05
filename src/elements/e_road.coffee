@@ -338,3 +338,6 @@ class TSAG.E_Road extends TSAG.E_Super
 
         return [null, null]
 
+    # FIXME: Return a real cost.
+    getCost: () ->
+        return @_main_curve.length()

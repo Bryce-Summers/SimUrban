@@ -16,6 +16,9 @@ class TSAG.E_UI_Game extends TSAG.E_UI
 
         super(@scene)
 
+        @hapiness = .70
+        @cost = 0
+
         @createButtons()
         @createStaticObjects()
         @changeMessageText("Default Message")
@@ -54,8 +57,8 @@ class TSAG.E_UI_Game extends TSAG.E_UI
 
         # 64 pixels offset in the y direction.
         dim_highlight_button  = {x: 16, y:160, w:64, h:64}
-        @img_highlight_button = TSAG.style.newSprite("images/stats.png", dim_stats_button)
-        view.add(@img_stats_button)
+        @img_highlight_button = TSAG.style.newSprite("images/highlight.png", dim_highlight_button)
+        view.add(@img_highlight_button)
 
         # -- Tool Button collision detection.
         pline_road_button      = BDS.Polyline.newRectangle(dim_road_button)
@@ -78,22 +81,28 @@ class TSAG.E_UI_Game extends TSAG.E_UI
             @controller_build_road.setMode(mode)
         ###
 
-        func_build_road = () ->
-            @mouse_controller.deactivateTools()
-            @controller_build_road.setActive(true)
+        func_build_road = (self) ->
+            () ->
+                self.mouse_controller.deactivateTools()
+                self.controller_build_road.setActive(true)
+                return
 
-        func_stats = () ->
-            @mouse_controller.deactivateTools()
-            @controller_build_road.setActive(true)
+        func_stats = (self) ->
+            () ->
+                self.mouse_controller.deactivateTools()
+                self.controller_stats.setActive(true)
+                return
 
-        func_highlight = () ->
-            @mouse_controller.deactivateTools()
-            @controller_highlight.setActive(true)
+        func_highlight = (self) ->
+            () ->
+                self.mouse_controller.deactivateTools()
+                self.controller_highlight.setActive(true)
+                return
 
 
-        @createButton(pline_road_button,      @img_road_button.children[0].material,      func_build_road)
-        @createButton(pline_stats_button,     @img_stats_button.children[0].material,     func_stats)
-        @createButton(pline_highlight_button, @img_highlight_button.children[0].material, func_highlight)
+        @createButton(pline_road_button,      @img_road_button.children[0].material,      func_build_road(@))
+        @createButton(pline_stats_button,     @img_stats_button.children[0].material,     func_stats(@))
+        @createButton(pline_highlight_button, @img_highlight_button.children[0].material, func_highlight(@))
 
 
     createStaticObjects: () ->
@@ -104,15 +113,20 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         left_border = @_createRectangle({fill: 0x808080, x: 0, y: 0, w:96, h:800, depth:-7})
         view.add(left_border)
 
-        @img_cost_label = TSAG.style.newSprite("images/cost.png", {x: 0, y:704, w:96, h:96})
-        view.add(@img_cost_label)
+        # Hapiness information.
+        dim_happy = {x: 0, y:704, w:96, h:96}
+        img_happy_label = TSAG.style.newSprite("images/happy_face.png", dim_happy)
+        view.add(img_happy_label)
+
+        hapiness_display = @_createRectangle({fill: 0xb0efcd, x: 64, y: 800 - 16 - 50, w:200, h:50, depth:-5})
+        view.add(hapiness_display)
+
+        sadness_display = @_createRectangle({fill: 0xeec3c3, x: 64 + 200, y: 800 - 66, w:56, h:50, depth:-5})
+        view.add(sadness_display)
 
         # center of rectangle aligned.
         bottom_border = @_createRectangle({fill: 0x808080, x: 0, y: 800 - 16, w:1200, h:16, depth:-6})
         view.add(bottom_border)
-
-        cost_display = @_createRectangle({fill: 0xffffff, x: 64, y: 800 - 16 - 50, w:256, h:50, depth:-5})
-        view.add(cost_display)
 
         @info_message_display = @_createRectangle({fill: 0x0000ff, x: 64 + 256, y: 800 - 66, w:520, h:66, depth:-5})
         view.add(@info_message_display)
@@ -123,19 +137,27 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         view.add(@info_message_text)
 
 
-        img_happy_label = TSAG.style.newSprite("images/happy_face.png", {x: 830, y:800 - 96, w:96, h:96})
-        view.add(img_happy_label)
+        # Cost Display.
+        dim_cost = {x: 830, y:800 - 96, w:96, h:96}
+        @img_cost_label = TSAG.style.newSprite("images/cost.png", dim_cost)
+        view.add(@img_cost_label)
 
+        cost_display = @_createRectangle({fill: 0xffffff, x: 900, y: 800 - 66, w:1200 - 900, h:50, depth:-5})
+        view.add(cost_display)
+
+        @cost_message_text = new THREE.Object3D()
+        @cost_message_text.position.x = 930
+        @cost_message_text.position.y = 800 - 66 + 10
+        view.add(@cost_message_text)
+
+        @displayCost()
+
+        ###
         img_sad_label = TSAG.style.newSprite("images/sad_face.png", {x: 1200 - 96, y:800 - 96, w:96, h:96})
         view.add(img_sad_label)
+        ###
 
-        happiness_display = @_createRectangle({fill: 0xb0efcd, x: 900, y: 800 - 66, w:154, h:50, depth:-5})
-        view.add(happiness_display)
-
-        sadness_display = @_createRectangle({fill: 0xeec3c3, x: 1058, y: 800 - 66, w:60, h:50, depth:-5})
-        view.add(sadness_display)
-
-
+ 
 
     ###
 
@@ -169,15 +191,27 @@ class TSAG.E_UI_Game extends TSAG.E_UI
         @changeMessageText(str)
 
     changeMessageText: (str) ->
+        @changeText(@info_message_text, str)
+
+    addCost: (amount) ->
+        @cost += amount
+        @displayCost()
+
+    displayCost: () ->
+        @changeText(@cost_message_text, "$" + Math.floor(@cost/100) + " million")
+
+
+    # THREE.Object3D(), String
+    changeText: (text_obj, str) ->
         # Clear all children.
-        @info_message_text.children = []
+        text_obj.children = []
 
         TSAG.style.newText({font: TSAG.style.font
                             ,height: 16
                             ,fill_color: 0xff000000
                             #,outline_color: 0xffffff
                             ,message: str
-                            ,out:@info_message_text})
+                            ,out:text_obj})
 
     # Flash the ui message to blue, it will revert back to its proper state in time.
     flash: () ->
