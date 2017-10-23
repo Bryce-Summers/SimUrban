@@ -6,8 +6,6 @@ Written by Bryce Summers on 1 - 31 - 2017.
 
 Purpose: This class specifies the gameplay properties of car objects.
 
-
-
 ###
 
 class TSAG.E_Car extends TSAG.E_Super

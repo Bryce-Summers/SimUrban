@@ -24,6 +24,7 @@ class TSAG.E_Road extends TSAG.E_Super
         @_road_visual = null
         @_center_polyline = null
 
+        # TSAG.S_Lane
         @lanes = []
 
         @vert_start = null
