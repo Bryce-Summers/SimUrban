@@ -7,21 +7,21 @@
         Deals with all of the common problems such as adding a material and changing its color.
 ###
 
-class TSAG.Mesh_Basic extends THREE.Mesh
+class EX.Mesh_Basic extends THREE.Mesh
 
     constructor: (area_geometry, @outline_geometry) ->
 
         # Affix the geometry with a material.
-        @fill_material = TSAG.style.m_default_fill.clone()
+        @fill_material = EX.style.m_default_fill.clone()
         super(area_geometry, @fill_material);
 
         # Black Line color.
-        @line_material = TSAG.style.m_default_line.clone()
+        @line_material = EX.style.m_default_line.clone()
 
     # color: THREE.Color fill color.
     clone: (params) ->
         output  = new THREE.Object3D()
-        mesh    = new TSAG.Mesh_Basic(@geometry)
+        mesh    = new EX.Mesh_Basic(@geometry)
         outline = new THREE.Line(@outline_geometry, @line_material)
         outline.renderOrder = 1
         output.add(mesh)
@@ -42,6 +42,6 @@ class TSAG.Mesh_Basic extends THREE.Mesh
             @children[0].material.color = c
 
         output.revertFillColor = () ->
-            @children[0].material.color = TSAG.style.m_default_fill.color.clone()
+            @children[0].material.color = EX.style.m_default_fill.color.clone()
 
         return output;

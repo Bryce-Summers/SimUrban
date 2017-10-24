@@ -12,7 +12,7 @@
     
 ###
 
-class TSAG.Mesh_Unit_Triangle extends TSAG.Mesh_Basic
+class EX.Mesh_Unit_Triangle extends EX.Mesh_Basic
 
     constructor: () ->
 

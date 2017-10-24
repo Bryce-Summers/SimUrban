@@ -9,7 +9,7 @@
      - Provides a unit square that can then be scaled, positioned, and rotated.
 ###
 
-class TSAG.Mesh_Unit_Circle extends TSAG.Mesh_Basic
+class EX.Mesh_Unit_Circle extends EX.Mesh_Basic
 
     constructor: () ->
 

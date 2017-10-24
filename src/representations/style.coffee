@@ -24,6 +24,8 @@ EX.init_style = () ->
         m_default_fill: new THREE.MeshBasicMaterial( {color: 0xdddddd, side: THREE.DoubleSide} ),
         m_default_line: new THREE.LineBasicMaterial( {color: 0x000000, linewidth:5}),
 
+        m_flat_fill: new THREE.MeshBasicMaterial( {color: 0xdddddd, side: THREE.DoubleSide} ),
+
         # Colors.
         c_building_fill:      new THREE.Color(0xaaaaaa),
         c_building_outline:   new THREE.Color(0x000000),
@@ -60,6 +62,6 @@ EX.init_style = () ->
 
                                     EX.style.font = font
 
-                                    for params in EX.style.textMeshQueue
+                                    for params in EX.Visual_Factory.textMeshQueue
                                         EX.style.newText(params)
                                )

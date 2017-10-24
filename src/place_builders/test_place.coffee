@@ -24,4 +24,4 @@ class TSAG.Test_Place extends TSAG.Place_Element
         square_place = new TSAG.Place_Element(place_model)
         square_place.setVisualRepresentation(square_mesh)
 
-
+        @addPlace(square_place)

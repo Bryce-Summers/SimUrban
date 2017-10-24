@@ -15,10 +15,10 @@ var root_AABB;
 function init()
 {
     // run some Tests.
-    new TSAG.Testing();
+    new EX.Testing();
 
     // Initialize all of the global material, mesh constructor's, etc.
-    TSAG.init_style();
+    EX.init_style();
 
     init_camera();
 
@@ -35,8 +35,10 @@ function init()
     // Set Renderer background clear color.
     renderer.setClearColor( 0xD8C49E );
 
-    init_input();
+    // FIXME: Re-enable input when we have tested it some more.
+    //init_input();
 
+    new EX.Visual_Factory()
     
     // Initialize the initial game state using the test place.
     var place = new TSAG.Test_Place();
@@ -76,10 +78,10 @@ function init_renderer(params)
 function init_input()
 {
     // Initialize the root of the input specification tree.
-    input = new TSAG.I_All_Main(root_e_scene, root_camera);
+    input = new TSAG.I_All_Main(root_scene, root_camera);
 
     // Provide the scene with a hook into the io tree.
-    root_e_scene.setInputRoot(input);
+    root_scene.setInputRoot(input);
 
     window.addEventListener( 'resize', onWindowResize, false);
 
@@ -183,7 +185,7 @@ function animate()
 
 function render()
 {
-    renderer.render(root_e_scene.getVisual(), root_camera);
+    renderer.render(root_scene.getVisualRepresentation(), root_camera);
 }
 
 // Since we are using a fixed size screen, we will need to translate the events.

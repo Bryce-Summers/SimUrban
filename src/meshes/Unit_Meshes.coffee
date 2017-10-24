@@ -11,12 +11,12 @@
 # Ideally this will only be ever allocated once in the style file.
 
 
-class TSAG.Unit_Meshes
+class EX.Unit_Meshes
 
     constructor: () ->
-        @_square   = new TSAG.Mesh_Unit_Square();
-        @_circle   = new TSAG.Mesh_Unit_Circle();
-        @_triangle = new TSAG.Mesh_Unit_Triangle();
+        @_square   = new EX.Mesh_Unit_Square();
+        @_circle   = new EX.Mesh_Unit_Circle();
+        @_triangle = new EX.Mesh_Unit_Triangle();
 
     #params{color: hexvalue, material:}
     newSquare: (params) ->

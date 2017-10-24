@@ -29,7 +29,8 @@ class TSAG.Scene
         # Also, links up all of the sub models' views to this one.
         @init()
 
-    
+    getVisualRepresentation: () ->
+        return @view
 
     # Instantiates a complete model of the game state.
     init: () ->
@@ -49,8 +50,9 @@ class TSAG.Scene
         @_view_levels = []
         for i in [1...10]
             level = new THREE.Object3D()
-            view.position.z = 1.0 / 10 * i
-            @_view_levels.push(view)
+
+            level.position.z = 1.0 / 10 * i
+            @_view_levels.push(level)
             @view.add(level)
 
     # Changes the game view to the given place.
@@ -59,7 +61,8 @@ class TSAG.Scene
 
         # Remove all representations from the view levels.
         for level in @_view_levels
-            level.clear()
+            while level.children.length > 0
+                level.children.pop()
 
         place.populateViewLevels(@_view_levels, 10)
 

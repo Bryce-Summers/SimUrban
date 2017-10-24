@@ -35,7 +35,7 @@ class TSAG.Element
 
     setVisualRepresentation: (visual) ->
         @_visual = visual
-        @_view.clear() # Remove old visual.
+        @_view.remove(@_visual) # Remove old visual.
         @_view.add(@_visual)
         return
 

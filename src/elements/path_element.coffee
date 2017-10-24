@@ -4,7 +4,9 @@
 
 class TSAG.Path_Element extends TSAG.Element
 
-    constructor: (polyline, width, fill_color) ->
+    constructor: (model, polyline, width, fill_color) ->
+
+        super(model)
 
         # Representation stuff.
         @_polyline = null

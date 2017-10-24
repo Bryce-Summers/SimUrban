@@ -8,6 +8,7 @@ class EX.Visual_Factory
 
     constructor: () ->
 
+        EX.Visual_Factory.unit_meshes = new EX.Unit_Meshes()
     ###
         # Local Variables.
 
@@ -43,7 +44,7 @@ class EX.Visual_Factory
 
     # Unit Geometries for rendering.
     # This needs to be below the style specifications, because it looks them up in its constructor.
-    @unit_meshes = new EX.Unit_Meshes()
+    @unit_meshes = null
     @textMeshQueue = []
     @textureLoader = new THREE.TextureLoader()
 
@@ -68,7 +69,6 @@ class EX.Visual_Factory
         line_material.color = color.clone()
 
         mesh = new THREE.Line(geom, line_material)
-        @scene.add(mesh)
         return mesh
 
     # BDS.Polyline, THREE.Color -> 
@@ -82,7 +82,6 @@ class EX.Visual_Factory
 
         pathFactory = new EX.Path_Visual_Factory(polyline, width, color, show_outline)
         mesh = pathFactory.getPathVisual()
-        @scene.add(mesh)
         return mesh
 
 
@@ -99,7 +98,7 @@ class EX.Visual_Factory
         geometry = new THREE.ShapeGeometry( shape )
         material = EX.style.m_flat_fill.clone()
         mesh = new THREE.Mesh( geometry, material )
-        @scene.add( mesh )
+        return mesh
 
 
     @newPoint: (pt, color, radius) ->
@@ -114,8 +113,6 @@ class EX.Visual_Factory
                              ,material:material
                              ,position:pos
                              ,scale:scale})
-
-        @scene.add(mesh)
         return mesh
 
 
