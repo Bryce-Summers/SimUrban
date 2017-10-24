@@ -1,11 +1,12 @@
 /*
- * Entry Point to my Transportation Simulation Game.
- * Sets up THREE.js on the DOM and sets up input from the browser.
+ * Entry Point to demo.
+ * Pipes THREE.js and browser IO to game.
  * Written by Bryce Summers on 11/22/2016
+ * Refactored by Bryce on 10.23.2017
  */
 
 var renderer;
-var root_e_scene;
+var root_scene;
 var root_camera;
 
 var input;
@@ -19,16 +20,38 @@ function init()
     // Initialize all of the global material, mesh constructor's, etc.
     TSAG.init_style();
 
+    init_camera();
+
+    // Initialize Demo through the scene node.
+    root_scene = new TSAG.Scene();
+    
+    // Renderer.
+    var params = {
+        antialias: true,
+    };
+    
+    init_renderer(params);
+
+    // Set Renderer background clear color.
+    renderer.setClearColor( 0xD8C49E );
+
+    init_input();
+
+    
+    // Initialize the initial game state using the test place.
+    var place = new TSAG.Test_Place();
+    root_scene.addPlace(place);
+    root_scene.setViewToPlace(place);
+}
+
+function init_camera()
+{
     // Camera.
     //var dim = {x:0, y:0, w:window.innerWidth, h:innerHeight, padding:10};
     // Fixed reolution viewport.
     dim = {x:0, y:0, w:1200, h:800, padding:10};
-
-    // Scene Graph.
-    root_e_scene = new TSAG.E_Scene(dim.w, dim.h);//window.innerWidth, window.innerHeight);
-
-    
-    
+   
+    // I may want to change to a perspective camera if we want to start showing depth information.
     root_camera = new THREE.OrthographicCamera( dim.x - dim.w/2, dim.x + dim.w/2, dim.y - dim.h/2, dim.y + dim.h/2, 1, 1000 );
     root_camera.position.z = 2;
 
@@ -38,21 +61,6 @@ function init()
     root_camera.position.y = y;
 
     root_camera.lookAt(new THREE.Vector3(x, y, 0))
-
-
-    // Renderer.
-    var params = {
-        antialias: true,
-    };
-    
-    init_renderer(params);
-
-    // Clear to white Background.
-    // FIXME: Use a Style Class.
-    // FIXME: Move this to a background prropery of the E_Scene.
-    renderer.setClearColor( 0xD8C49E );
-
-    init_input();
 }
 
 function init_renderer(params)
